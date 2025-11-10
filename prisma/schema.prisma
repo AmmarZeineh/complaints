@@ -1,0 +1,71 @@
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model UserRole {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  users User[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt()
+  deletedAt DateTime?
+}
+
+
+  model User {
+    id          Int       @id @default(autoincrement())
+    name        String
+    email       String    @unique
+    password    String
+    tokens            UserToken[]  
+    notifications     Notification[] 
+    roleId Int
+    role   UserRole @relation(fields: [roleId], references: [id])
+    isEmailVerified   Boolean  @default(false)
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt()
+    deletedAt   DateTime?
+
+  }
+
+  model EmailVerification {
+  id        Int      @id @default(autoincrement())
+  email     String
+  code      String
+  expiresAt DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt()
+  deletedAt   DateTime?
+}
+
+model UserToken {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  fcmToken   String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt   DateTime?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  type      String?   
+  data      Json?   
+  isRead    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt        DateTime @updatedAt()
+  deletedAt        DateTime?
+
+}
+
