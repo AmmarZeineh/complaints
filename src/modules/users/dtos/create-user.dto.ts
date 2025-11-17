@@ -27,4 +27,7 @@ export class CreateUserDto {
   @Type(() => Number)
   roleId: number;
 
+  @ApiProperty()
+  @IsString()
+  nationalID: string;
 }

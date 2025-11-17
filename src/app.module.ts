@@ -10,6 +10,8 @@ import { ConfigModule } from '@nestjs/config';
 import { EmailVerificationModule } from './modules/emailVerfication/EmailVerficationModule';
 import { NotificationModule } from './modules/notification/notificationModule';
 import { ScheduleModule } from '@nestjs/schedule';
+import { GivernmentModule } from './modules/government/government.module';
+import { ComplaintModule } from './modules/complaint/complaint.module';
 
 
 
@@ -27,6 +29,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule,
     EmailVerificationModule,
     NotificationModule,
+    GivernmentModule,
+    ComplaintModule,
   ],
   controllers: [AppController],
   providers: [AppService],
