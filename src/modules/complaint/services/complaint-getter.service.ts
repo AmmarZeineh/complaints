@@ -9,6 +9,40 @@ import { selectComplaintValidator } from '../validators/select-complaint-validat
 export class ComplaintGetterService {
   constructor(private readonly _prisma: PrismaService) {}
 
+    async findMyComplaints(
+    userId: number,
+    pagination: PaginationDto,
+    filter?: ComplaintFilterDto,
+  ): Promise<FindAllComplaintDto> {
+    const skip = Math.max(pagination.skip ?? 0, 0);
+    const take = pagination.limit ?? 10;
+
+    const where: any = {
+      userId, // ← فلتر حسب المستخدم الحالي
+    };
+
+    // إضافة البحث إذا وُجد
+    if (filter?.search) {
+      where.OR = [
+        { description: { contains: filter.search } },
+        { type: { contains: filter.search } },
+      ];
+    }
+
+    const [data, count] = await Promise.all([
+      this._prisma.complaint.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' }, // ← الأحدث أولاً
+        select: selectComplaintValidator(),
+      }),
+      this._prisma.complaint.count({ where }),
+    ]);
+
+    return new FindAllComplaintDto(count, data);
+  }
+
   async findAll(
     pagination: PaginationDto,
     filter?: ComplaintFilterDto,

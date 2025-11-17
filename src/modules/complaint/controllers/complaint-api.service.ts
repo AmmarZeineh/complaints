@@ -41,4 +41,12 @@ async create(dto: CreateComplaintDto, userId: number, file?: Express.Multer.File
     await this._deleter.delete(id);
     return { message: 'Deleted successfully' };
   }
+
+    async findMyComplaints(
+    userId: number,
+    pagination: PaginationDto,
+    filter?: ComplaintFilterDto,
+  ) {
+    return this._getter.findMyComplaints(userId, pagination, filter);
+  }
 }

@@ -63,6 +63,21 @@ async create(
     return this._complaintApi.findAll(pagination, filter);
   }
 
+
+   @ApiBearerAuth('access-token')
+  @UseGuards(AuthGuard('jwt'))
+  @Get('my-complaints')
+  @ApiOperation({ summary: 'Get my complaints' })
+  @ApiResponse({ type: FindAllComplaintDto })
+  async getMyComplaints(
+    @Query() pagination: PaginationDto,
+    @Query() filter: ComplaintFilterDto,
+    @Req() req: any,
+  ) {
+    const userId = Number(req.user.id);
+    return this._complaintApi.findMyComplaints(userId, pagination, filter);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get complaint by ID' })
   @ApiResponse({ type: ComplaintDto })
