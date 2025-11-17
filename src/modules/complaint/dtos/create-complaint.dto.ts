@@ -19,6 +19,10 @@ export class CreateComplaintDto {
   @IsString()
   description: string;
 
+  @ApiProperty()
+  @IsString()
+  Location: string;
+  
   @ApiProperty({ type: 'string', format: 'binary', required: false })
   @IsOptional()
   documents?: any; 

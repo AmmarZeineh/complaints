@@ -14,6 +14,9 @@ export class ComplaintDto {
   description: string;
 
   @ApiProperty()
+  Location: string;
+  
+  @ApiProperty()
   type: string;
 
    @ApiProperty()
@@ -30,6 +33,7 @@ export class ComplaintDto {
     this.userId = raw.userId;
     this.governmentId = raw.governmentId;
     this.description = raw.description;
+    this.Location = raw.Location;
     this.type = raw.type;
     this.documents = raw.documents;
     this.createdAt = raw.createdAt; 
@@ -42,6 +46,7 @@ export type RawComplaint = {
   userId: number;
   governmentId: number;
   description: string;
+  Location:string;
   documents: string;
   type:string;
   createdAt: Date;

@@ -32,6 +32,7 @@ documentPath = filePath;
         userId,
         governmentId: dto.governmentId,
         description: dto.description,
+        Location: dto.Location,
         type: dto.type,
         documents: documentPath,
       },

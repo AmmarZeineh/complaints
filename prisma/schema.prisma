@@ -50,6 +50,7 @@ model UserRole {
   userId        Int
   governmentId  Int
   type          String
+  Location      String
   description   String
   documents     String?
   createdAt   DateTime  @default(now())

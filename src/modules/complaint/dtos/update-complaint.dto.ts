@@ -13,6 +13,11 @@ export class UpdateComplaintDto {
   @IsString()
   type?: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  Location?: string;
+
   @ApiProperty({
     type: 'string',
     format: 'binary',

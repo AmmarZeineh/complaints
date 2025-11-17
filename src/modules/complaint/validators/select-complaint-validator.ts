@@ -7,6 +7,7 @@ export const selectComplaintValidator = () =>
     governmentId: true,
     type: true,
     description: true,
+    Location: true,
     documents: true,
     createdAt: true,
     updatedAt: true,
