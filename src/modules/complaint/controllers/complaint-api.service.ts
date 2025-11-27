@@ -49,4 +49,13 @@ async create(dto: CreateComplaintDto, userId: number, file?: Express.Multer.File
   ) {
     return this._getter.findMyComplaints(userId, pagination, filter);
   }
+
+  async findByGovernmentName(
+  governmentName: string,
+  pagination: PaginationDto,
+  filter?: ComplaintFilterDto,
+) {
+  return this._getter.findByGovernmentName(governmentName, pagination);
+}
+
 }

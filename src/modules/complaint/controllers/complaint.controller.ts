@@ -30,6 +30,7 @@ import { ComplaintDto } from '../dtos/complaint.dto';
 import { FindAllComplaintDto } from '../dtos/find-all-complaint.dto';
 import { AuthGuard } from '@nestjs/passport';
 
+
 @ApiTags('Complaint')
 @Controller('complaint')
 export class ComplaintController {
@@ -78,6 +79,17 @@ async create(
     return this._complaintApi.findMyComplaints(userId, pagination, filter);
   }
 
+@Get('by-government')
+@ApiOperation({ summary: 'Get complaints by government name' })
+@ApiResponse({ type: FindAllComplaintDto })
+async findByGovernment(
+  @Query('name') governmentName: string,
+  @Query() pagination: PaginationDto,
+) {
+  return this._complaintApi.findByGovernmentName(governmentName, pagination);
+}
+
+
   @Get(':id')
   @ApiOperation({ summary: 'Get complaint by ID' })
   @ApiResponse({ type: ComplaintDto })
@@ -106,4 +118,6 @@ async create(
   async delete(@Param('id') id: number) {
     return this._complaintApi.delete(id);
   }
+
+
 }

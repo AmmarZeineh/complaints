@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Status } from '@prisma/client';
 
 export class ComplaintDto {
   @ApiProperty()
@@ -22,11 +23,20 @@ export class ComplaintDto {
    @ApiProperty()
   documents: string;
 
+  @ApiProperty({ enum: Status })
+  status: Status;
+
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
+
+ @ApiProperty({ required: false })
+  user?: { id: number; name: string };
+
+  @ApiProperty({ required: false })
+  government?: { id: number; name: string };
 
   constructor(raw: RawComplaint) {
     this.id = raw.id;
@@ -36,8 +46,11 @@ export class ComplaintDto {
     this.Location = raw.Location;
     this.type = raw.type;
     this.documents = raw.documents;
+    this.status = raw.status;
     this.createdAt = raw.createdAt; 
     this.updatedAt = raw.updatedAt;
+    this.user = raw.user;
+    this.government = raw.government;
    }
 }
 
@@ -48,7 +61,16 @@ export type RawComplaint = {
   description: string;
   Location:string;
   documents: string;
+  status: Status;
   type:string;
   createdAt: Date;
   updatedAt: Date;
+    user?: {
+    id: number;
+    name: string;
+  };
+  government?: {
+    id: number;
+    name: string;
+  };
 };
