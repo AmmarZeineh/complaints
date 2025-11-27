@@ -5,6 +5,7 @@ export const selectUserValidator = () => {
     id: true,
     email: true,
     name:true,
+    nationalID: true,
     isEmailVerified:true,
     createdAt: true,
     updatedAt: true,
@@ -15,6 +16,5 @@ export const selectUserValidator = () => {
         name: true,
       },
     },
-
   });
 };

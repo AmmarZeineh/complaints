@@ -49,11 +49,6 @@ async validateUser(email: string, password: string): Promise<RawUser> {
     });
   }
 
-
-
-
-  
-
     return {
       token,
       user,

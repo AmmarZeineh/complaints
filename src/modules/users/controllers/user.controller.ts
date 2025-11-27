@@ -41,20 +41,15 @@ export class UserController {
   ) {}
 
   @Post()
-@ApiOperation({ summary: 'Create a new user' })
-@ApiBody({
-type: CreateUserDto,
-})
-@ApiResponse({ type: UserDto })
-async create(
-  @Body() body: CreateUserDto
-): Promise<UserDto> {
-
-  
- return this._userApiService.create(body);
-}
-
-
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiBody({
+  type: CreateUserDto,
+  })
+  @ApiResponse({ type: UserDto })
+  async create(
+   @Body() body: CreateUserDto): Promise<UserDto> {
+  return this._userApiService.create(body);
+  }
 
   @Get()
   @ApiResponse({ type: FindAllUserDto })
@@ -73,16 +68,14 @@ async create(
     return this._userApiService.findOne(id);
   }
 
-
-
-@Patch('forget-password') 
-@ApiOperation({ summary: 'forget  password' })
-async forgetPassword(
-  @Body() forgetPassword: ForgetPasswordDto,
-) {
-  
-  return this._userApiService.forgetPassword(forgetPassword);
-}
+  @Patch('forget-password') 
+  @ApiOperation({ summary: 'forget  password' })
+  async forgetPassword(
+    @Body() forgetPassword: ForgetPasswordDto,
+  ) {
+    
+    return this._userApiService.forgetPassword(forgetPassword);
+  }
 
   @Patch(':id')
   @ApiResponse({ type: UserDto })
@@ -99,10 +92,5 @@ async forgetPassword(
   async remove(@Param('id') id: number) {
     return this._userApiService.delete(id);
   }
-
-
-
-
-
 
 }

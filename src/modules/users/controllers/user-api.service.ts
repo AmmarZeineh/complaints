@@ -27,7 +27,6 @@ export class UserApiService {
   ) {}
 
 
-
 async forgetPassword(dto: ForgetPasswordDto): Promise<{ message: string }> {
   await this._userUpdater.forgetPassword(dto.email, dto.newPassword);
   return { message: 'Password updated successfully' };
@@ -36,18 +35,17 @@ async forgetPassword(dto: ForgetPasswordDto): Promise<{ message: string }> {
   async create(data: CreateUserDto): Promise<UserDto> {
     const hashedPassword = await bcrypt.hash(data.password,10);
 
-    if(Number(data.roleId)==3){
-      await this.emailVerificationService.sendVerificationCode(data.email);
-    }
-
+  
     const raw = await this._userCreator.create({
       ...data,
       password: hashedPassword,
     });
 
+     if(Number(data.roleId)==3){
+      await this.emailVerificationService.sendVerificationCode(data.email);  
+      } 
     return new UserDto(raw);
   }
-
 
   async findOne(id: number): Promise<UserDto> {
     const raw = await this._userGetter.findById(id);
