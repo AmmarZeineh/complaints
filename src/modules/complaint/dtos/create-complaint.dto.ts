@@ -8,8 +8,8 @@ import {
   IsOptional,
 } from 'class-validator';
 
+
 export class CreateComplaintDto {
-    
   @IsNumber()
   @ApiProperty()
   @Type(() => Number)
@@ -22,13 +22,26 @@ export class CreateComplaintDto {
   @ApiProperty()
   @IsString()
   Location: string;
-  
-  @ApiProperty({ type: 'string', format: 'binary', required: false })
-  @IsOptional()
-  documents?: any; 
 
   @ApiProperty()
   @IsString()
   type: string;
 
+  @ApiProperty({ 
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    required: false,
+    description: 'يمكن رفع حتى 10 صور (JPG, PNG, GIF) - حجم أقصى 5MB لكل صورة'
+  })
+  @IsOptional()
+  images?: any[];
+
+  @ApiProperty({ 
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    required: false,
+    description: 'يمكن رفع حتى 5 ملفات (PDF, DOCX, XLSX) - حجم أقصى 10MB لكل ملف'
+  })
+  @IsOptional()
+  documents?: any[];
 }

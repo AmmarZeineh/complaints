@@ -16,7 +16,7 @@ export class ComplaintDto {
 
   @ApiProperty()
   Location: string;
-  
+
   @ApiProperty()
   type: string;
 

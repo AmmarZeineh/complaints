@@ -52,7 +52,8 @@ model UserRole {
   type          String
   Location      String
   description   String
-  documents     String?
+  images       String?   @db.Text  // JSON string مخزن كـ Text
+  documents    String?   @db.Text  // JSON string مخزن كـ Text
   status        Status   @default(NEW)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt()

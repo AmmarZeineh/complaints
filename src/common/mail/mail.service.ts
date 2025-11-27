@@ -13,12 +13,14 @@
 
     async sendVerificationCode(email: string, code: string) {
       await this.transporter.sendMail({
+
         from: `"ComplaintsApp" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: 'Your Verification Code',
         text: `Your verification code is: ${code}`,
       });
     }
+
 
 
   // async sendRejectionEmail(email: string, reason: string): Promise<void> {
