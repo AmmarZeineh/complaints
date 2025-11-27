@@ -9,6 +9,7 @@ export const selectComplaintValidator = () =>
     description: true,
     Location: true,
     documents: true,
+    images: true,
     createdAt: true,
     updatedAt: true,
   });

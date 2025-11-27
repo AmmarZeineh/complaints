@@ -11,6 +11,7 @@ import {
   UploadedFile,
   UseGuards,
   Req,
+  UploadedFiles,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,7 +21,7 @@ import {
   ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ComplaintApiService } from './complaint-api.service';
 import { CreateComplaintDto } from '../dtos/create-complaint.dto';
 import { UpdateComplaintDto } from '../dtos/update-complaint.dto';
@@ -36,22 +37,28 @@ export class ComplaintController {
   constructor(private readonly _complaintApi: ComplaintApiService) {}
 
 
-@ApiBearerAuth('access-token')
-@UseGuards(AuthGuard('jwt'))
-@Post()
-@ApiConsumes('multipart/form-data')
-@UseInterceptors(FileInterceptor('documents'))
-@ApiOperation({ summary: 'Create a new complaint' })
-@ApiResponse({ type: ComplaintDto })
-async create(
-  @Body() dto: CreateComplaintDto,
-  @Req() req,
-  @UploadedFile() file?: Express.Multer.File,
-) {
-  const userId = Number(req.user.id);
-  return this._complaintApi.create(dto, userId, file);
-}
-
+    @ApiBearerAuth('access-token')
+    @UseGuards(AuthGuard('jwt'))
+    @Post()
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(
+  FileFieldsInterceptor([
+    { name: 'images', maxCount: 10 },
+    { name: 'documents', maxCount: 5 },
+  ])
+    )
+    @ApiOperation({ summary: 'Create a new complaint with multiple files' })
+    @ApiResponse({ type: ComplaintDto })
+    async create(
+      @Body() dto: CreateComplaintDto,
+      @Req() req,
+  @UploadedFiles() files: {
+    images?: Express.Multer.File[],
+    documents?: Express.Multer.File[]
+  },    ) {
+      const userId = Number(req.user.id);
+      return this._complaintApi.create(dto, userId, files);
+    }
 
   @Get()
   @ApiOperation({ summary: 'Get all complaints' })
@@ -89,16 +96,16 @@ async create(
   @UseGuards(AuthGuard('jwt'))
   @Patch(':id')
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('documents'))
-  @ApiOperation({ summary: 'Update complaint' })
+  @UseInterceptors(FilesInterceptor('files', 15))
+  @ApiOperation({ summary: 'Update complaint with multiple files' })
   async update(
     @Param('id') id: number,
     @Body() dto: UpdateComplaintDto,
-     @Req() req: any,
-    @UploadedFile() file?: Express.Multer.File,
+    @Req() req: any,
+    @UploadedFiles() files?: Express.Multer.File[],
   ) {
     const userId = Number(req.user.id);
-    return this._complaintApi.update(id, dto,userId, file);
+    return this._complaintApi.update(id, dto, userId, files);
   }
 
   @Delete(':id')

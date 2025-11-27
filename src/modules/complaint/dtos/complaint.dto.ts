@@ -1,6 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
-
-export class ComplaintDto {
+import { ApiProperty } from '@nestjs/swagger';export class ComplaintDto {
   @ApiProperty()
   id: number;
 
@@ -15,12 +13,15 @@ export class ComplaintDto {
 
   @ApiProperty()
   Location: string;
-  
+
   @ApiProperty()
   type: string;
 
-   @ApiProperty()
-  documents: string;
+  @ApiProperty({ type: [String] })
+  images: string[];
+
+  @ApiProperty({ type: [String] })
+  documents: string[];
 
   @ApiProperty()
   createdAt: Date;
@@ -35,10 +36,14 @@ export class ComplaintDto {
     this.description = raw.description;
     this.Location = raw.Location;
     this.type = raw.type;
-    this.documents = raw.documents;
-    this.createdAt = raw.createdAt; 
+    
+    // تحويل JSON string إلى array
+    this.images = raw.images ? JSON.parse(raw.images) : [];
+    this.documents = raw.documents ? JSON.parse(raw.documents) : [];
+    
+    this.createdAt = raw.createdAt;
     this.updatedAt = raw.updatedAt;
-   }
+  }
 }
 
 export type RawComplaint = {
@@ -46,9 +51,10 @@ export type RawComplaint = {
   userId: number;
   governmentId: number;
   description: string;
-  Location:string;
-  documents: string;
-  type:string;
+  Location: string;
+  type: string;
+  images: string | null;     // JSON string من قاعدة البيانات
+  documents: string | null;  // JSON string من قاعدة البيانات
   createdAt: Date;
   updatedAt: Date;
 };

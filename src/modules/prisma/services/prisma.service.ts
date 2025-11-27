@@ -15,8 +15,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
 
   constructor() {
-    super();
-    this.$use(async (params, next) => {
+  super({
+    datasourceUrl: process.env.DATABASE_URL,
+      });
+      this.$use(async (params, next) => {
       try {
         return await next(params);
       } catch (error) {
