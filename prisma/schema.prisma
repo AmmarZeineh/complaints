@@ -21,10 +21,12 @@ model UserRole {
   model User {
     id          Int       @id @default(autoincrement())
     name        String
+    nationalID  String    @unique
     email       String    @unique
     password    String
     tokens            UserToken[]  
     notifications     Notification[] 
+    complaints          Complaint[] 
     roleId Int
     role   UserRole @relation(fields: [roleId], references: [id])
     isEmailVerified   Boolean  @default(false)
@@ -33,6 +35,30 @@ model UserRole {
     deletedAt   DateTime?
 
   }
+
+  model Government {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt()
+  deletedAt   DateTime?
+  complaints  Complaint[]
+}
+
+ model Complaint {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  governmentId  Int
+  type          String
+  Location      String
+  description   String
+  documents     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt()
+  deletedAt   DateTime?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  government  Government  @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+}
 
   model EmailVerification {
   id        Int      @id @default(autoincrement())

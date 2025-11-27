@@ -15,8 +15,10 @@ export async function swagger(app: INestApplication) {
         in: 'header',
         name: 'Authorization',
         description: 'Enter your Bearer token',
-      })
-      .addSecurityRequirements('bearer'),
+      },
+      'access-token',
+    )
+      .addSecurityRequirements('access-token'),
     {
       webServerOptions: {
         enabled: true,
@@ -44,6 +46,17 @@ export async function swagger(app: INestApplication) {
   const config = new DocumentBuilder()
     .setTitle('Template')
     .setVersion('1.0')
+     .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        in: 'header',
+        name: 'Authorization',
+        description: 'Enter your Bearer token',
+      },
+      'access-token', // ← نفس الاسم
+    )
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);

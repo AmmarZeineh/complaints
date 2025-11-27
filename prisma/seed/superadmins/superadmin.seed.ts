@@ -3,7 +3,7 @@ import * as bcrypt from 'bcrypt';
 import SUPERADMIN_DATA from './superadmin.json';
 
 export async function upsertSuperAdmin(prisma: PrismaService) {
-  const { name, email, password } = SUPERADMIN_DATA;
+  const { name, email, password , nationalID } = SUPERADMIN_DATA;
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -15,6 +15,7 @@ export async function upsertSuperAdmin(prisma: PrismaService) {
       email,
       password: hashedPassword,
       roleId: 1,
+      nationalID,
     },
   });
 }

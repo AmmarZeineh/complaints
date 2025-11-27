@@ -8,6 +8,9 @@ export class UserDto {
   name: string;
 
   @ApiProperty()
+  nationalID: string;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
@@ -27,6 +30,7 @@ export class UserDto {
   constructor(raw: RawUser) {
     this.id = raw.id;
     this.name = raw.name;
+    this.nationalID = raw.nationalID;
     this.email=raw.email;
     this.createdAt = raw.createdAt; 
     this.updatedAt = raw.updatedAt;
