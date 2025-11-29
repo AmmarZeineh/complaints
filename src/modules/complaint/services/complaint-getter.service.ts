@@ -117,37 +117,27 @@ export class ComplaintGetterService {
     // ✅ تحويل البيانات
     return this.parseComplaintData(complaint);
   }
+ async findByGovernmentId(
+  governmentId: number,
+  pagination: PaginationDto,
+): Promise<FindAllComplaintDto> {
+  const skip = Math.max(pagination.skip ?? 0, 0);
+  const take = pagination.limit ?? 10;
 
-  async findByGovernmentName(
-    governmentName: string,
-    pagination: PaginationDto,
-  ): Promise<FindAllComplaintDto> {
-    const skip = Math.max(pagination.skip ?? 0, 0);
-    const take = pagination.limit ?? 10;
 
-    const government = await this._prisma.government.findUnique({
-      where: { name: governmentName },
-    });
+  const where = { governmentId: governmentId, deletedAt: null };
 
-    if (!government) {
-      return new FindAllComplaintDto(0, []);
-    }
+  const [data, count] = await Promise.all([
+    this._prisma.complaint.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' },
+      select: selectComplaintValidator(),
+    }),
+    this._prisma.complaint.count({ where }),
+  ]);
 
-    const where = { governmentId: government.id, deletedAt: null };
-
-    const [data, count] = await Promise.all([
-      this._prisma.complaint.findMany({
-        where,
-        skip,
-        take,
-        select: selectComplaintValidator(),
-      }),
-      this._prisma.complaint.count({ where }),
-    ]);
-
-    // ✅ تحويل كل الشكاوى
-    const parsedData = data.map((complaint) => this.parseComplaintData(complaint));
-
-    return new FindAllComplaintDto(count, parsedData);
-  }
+  return new FindAllComplaintDto(count, data);
+}
 }

@@ -21,9 +21,11 @@ model UserRole {
   model User {
     id          Int       @id @default(autoincrement())
     name        String
-    nationalID  String    @unique
+    nationalID  String?    @unique
     email       String    @unique
     password    String
+    governmentId Int? 
+    government   Government? @relation(fields: [governmentId], references: [id])
     tokens            UserToken[]  
     notifications     Notification[] 
     complaints          Complaint[] 
@@ -42,6 +44,7 @@ model UserRole {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt()
   deletedAt   DateTime?
+  users          User[] 
   complaints  Complaint[]
 }
 

@@ -31,6 +31,7 @@ import { EmailVerificationService } from 'src/modules/emailVerfication/EmailVeri
 import { AuthGuard } from '@nestjs/passport';
 import { ChangePasswordDto } from '../dtos/change-password.dto';
 import { ForgetPasswordDto } from '../dtos/forgetPassword.dto';
+import { CreateEmployeeDto } from '../dtos/create-employee .dto';
 
 @ApiTags('User')
 @Controller('user')
@@ -92,5 +93,15 @@ export class UserController {
   async remove(@Param('id') id: number) {
     return this._userApiService.delete(id);
   }
+
+ @Post('employee')
+@ApiOperation({ summary: 'Admin creates government employee' })
+@ApiResponse({ type: UserDto })
+async createEmployee(
+  @Body() body: CreateEmployeeDto,
+): Promise<UserDto> {
+  return this._userApiService.createEmployee(body);
+}
+
 
 }
