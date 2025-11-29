@@ -20,15 +20,19 @@ export class UserGetterService {
     const take = pagination.limit || 10;
     const { search } = filter;
 
-    const where = search
-      ? {
-          OR: [
-            { name: { contains: search } },
-            { email: { contains: search } },
-             ,
-          ],
-        }
-      : {};
+   const orConditions = [];
+
+if (search) {
+  orConditions.push(
+    { name: { contains: search } },
+    { email: { contains: search } },
+  );
+}
+const where = {
+  deletedAt: null,
+  ...(orConditions.length > 0 && { OR: orConditions }),
+};
+
 
     const [data, count] = await Promise.all([
       this._prisma.user.findMany({

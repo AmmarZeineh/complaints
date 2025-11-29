@@ -12,6 +12,7 @@ import {
   UseGuards,
   Req,
   UploadedFiles,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -86,14 +87,14 @@ export class ComplaintController {
     return this._complaintApi.findMyComplaints(userId, pagination, filter);
   }
 
-@Get('by-government')
-@ApiOperation({ summary: 'Get complaints by government name' })
+@Get('by-government/:id')
+@ApiOperation({ summary: 'Get complaints by government id' })
 @ApiResponse({ type: FindAllComplaintDto })
 async findByGovernment(
-  @Query('name') governmentName: string,
+  @Param('id', ParseIntPipe) governmentId: number,
   @Query() pagination: PaginationDto,
 ) {
-  return this._complaintApi.findByGovernmentName(governmentName, pagination);
+  return this._complaintApi.findByGovernmentId(governmentId, pagination);
 }
 
 

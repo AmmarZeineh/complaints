@@ -7,23 +7,23 @@ export class GovernmentDto {
   @ApiProperty()
   name: string;
 
-  @ApiProperty()
-  createdAt: Date;
+  // @ApiProperty()
+  // createdAt: Date;
 
-  @ApiProperty()
-  updatedAt: Date;
+  // @ApiProperty()
+  // updatedAt: Date;
 
   constructor(raw: RawGovernment) {
     this.id = raw.id;
     this.name = raw.name;
-    this.createdAt = raw.createdAt; 
-    this.updatedAt = raw.updatedAt;
+    // this.createdAt = raw.createdAt; 
+    // this.updatedAt = raw.updatedAt;
    }
 }
 
 export type RawGovernment = {
   id: number;
   name: string;
-  createdAt: Date;
-  updatedAt: Date;
+  // createdAt: Date;
+  // updatedAt: Date;
 };

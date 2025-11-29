@@ -86,22 +86,15 @@ if (filter?.status) {
     });
   }
 
- async findByGovernmentName(
-  governmentName: string,
+ async findByGovernmentId(
+  governmentId: number,
   pagination: PaginationDto,
 ): Promise<FindAllComplaintDto> {
   const skip = Math.max(pagination.skip ?? 0, 0);
   const take = pagination.limit ?? 10;
 
-  const government = await this._prisma.government.findUnique({
-    where: { name: governmentName },
-  });
 
-  if (!government) {
-    return new FindAllComplaintDto(0, []); // أو يمكنك رمي NotFoundException
-  }
-
-  const where = { governmentId: government.id, deletedAt: null };
+  const where = { governmentId: governmentId, deletedAt: null };
 
   const [data, count] = await Promise.all([
     this._prisma.complaint.findMany({

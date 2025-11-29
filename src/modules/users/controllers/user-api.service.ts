@@ -14,6 +14,7 @@ import { ChangePasswordDto } from '../dtos/change-password.dto';
 import { ForgetPasswordDto } from '../dtos/forgetPassword.dto';
 import { EmailVerification } from '@prisma/client';
 import { EmailVerificationService } from 'src/modules/emailVerfication/EmailVerificationService';
+import { CreateEmployeeDto } from '../dtos/create-employee .dto';
 
 @Injectable()
 export class UserApiService {
@@ -34,8 +35,6 @@ async forgetPassword(dto: ForgetPasswordDto): Promise<{ message: string }> {
 
   async create(data: CreateUserDto): Promise<UserDto> {
     const hashedPassword = await bcrypt.hash(data.password,10);
-
-  
     const raw = await this._userCreator.create({
       ...data,
       password: hashedPassword,
@@ -69,6 +68,15 @@ async forgetPassword(dto: ForgetPasswordDto): Promise<{ message: string }> {
   async delete(id: number): Promise<{ message: string }> {
     await this._userDelete.delete(id);
     return { message: 'Successfully deleted' };
+  }
+  
+  async createEmployee(data: CreateEmployeeDto): Promise<UserDto> {
+    const hashedPassword = await bcrypt.hash(data.password,10);
+    const raw = await this._userCreator.createEmployee({
+      ...data,
+      password: hashedPassword,
+    }); 
+    return new UserDto(raw);
   }
 
 }
