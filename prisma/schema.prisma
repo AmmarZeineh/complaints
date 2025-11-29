@@ -29,6 +29,7 @@ model UserRole {
     tokens            UserToken[]  
     notifications     Notification[] 
     complaints          Complaint[] 
+    notes         ComplaintNote[]
     roleId Int
     role   UserRole @relation(fields: [roleId], references: [id])
     isEmailVerified   Boolean  @default(false)
@@ -63,6 +64,8 @@ model UserRole {
   deletedAt   DateTime?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   government  Government  @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  notes         ComplaintNote[]
+
 }
 enum Status {
   NEW
@@ -70,6 +73,23 @@ enum Status {
   COMPLETED
   REJECTED
 }
+
+model ComplaintNote {
+  id           Int       @id @default(autoincrement())
+  complaintId  Int
+  userId       Int       
+  content      String    @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt()
+  deletedAt    DateTime?
+  
+  complaint    Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id])
+  
+  @@index([complaintId])
+  @@index([userId])
+}
+
   model EmailVerification {
   id        Int      @id @default(autoincrement())
   email     String

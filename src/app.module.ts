@@ -12,6 +12,7 @@ import { NotificationModule } from './modules/notification/notificationModule';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GivernmentModule } from './modules/government/government.module';
 import { ComplaintModule } from './modules/complaint/complaint.module';
+import { ComplaintNoteModule } from './modules/complaintNote/complaintNote.module';
 
 
 
@@ -31,6 +32,7 @@ import { ComplaintModule } from './modules/complaint/complaint.module';
     NotificationModule,
     GivernmentModule,
     ComplaintModule,
+    ComplaintNoteModule,
   ],
   controllers: [AppController],
   providers: [AppService],
