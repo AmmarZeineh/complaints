@@ -55,8 +55,8 @@ model UserRole {
   type          String
   Location      String
   description   String
-  images       String?   @db.Text  // JSON string مخزن كـ Text
-  documents    String?   @db.Text  // JSON string مخزن كـ Text
+  images       String?   @db.Text  
+  documents    String?   @db.Text  
   status        Status   @default(NEW)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt()
@@ -64,12 +64,13 @@ model UserRole {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   government  Government  @relation(fields: [governmentId], references: [id], onDelete: Cascade)
 }
+
 enum Status {
   NEW
   INPROCESS
   COMPLETED
   REJECTED
-}
+} 
   model EmailVerification {
   id        Int      @id @default(autoincrement())
   email     String

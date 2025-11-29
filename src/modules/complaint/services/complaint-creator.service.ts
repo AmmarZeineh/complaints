@@ -30,11 +30,7 @@ export class ComplaintCreatorService {
     userId: number, 
     files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] }
   ) {
-    console.log('📁 Files received:', {
-      images: files?.images?.length || 0,
-      documents: files?.documents?.length || 0
-    });
-
+ 
     // التحقق من عدد وحجم الملفات
     this.validateFiles(files);
 
