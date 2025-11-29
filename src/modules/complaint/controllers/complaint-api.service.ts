@@ -57,4 +57,12 @@ export class ComplaintApiService {
   ) {
     return this._getter.findMyComplaints(userId, pagination, filter);
   }
+
+  async findByGovernmentId(
+  governmentId: number,
+  pagination: PaginationDto,
+) {
+  return this._getter.findByGovernmentId(governmentId, pagination);
+}
+
 }

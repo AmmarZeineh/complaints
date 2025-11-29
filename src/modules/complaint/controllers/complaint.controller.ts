@@ -12,6 +12,7 @@ import {
   UseGuards,
   Req,
   UploadedFiles,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -30,6 +31,7 @@ import { PaginationDto } from 'src/common/filter/pagination/pagination-param.dto
 import { ComplaintDto } from '../dtos/complaint.dto';
 import { FindAllComplaintDto } from '../dtos/find-all-complaint.dto';
 import { AuthGuard } from '@nestjs/passport';
+
 
 @ApiTags('Complaint')
 @Controller('complaint')
@@ -85,6 +87,17 @@ export class ComplaintController {
     return this._complaintApi.findMyComplaints(userId, pagination, filter);
   }
 
+@Get('by-government/:id')
+@ApiOperation({ summary: 'Get complaints by government id' })
+@ApiResponse({ type: FindAllComplaintDto })
+async findByGovernment(
+  @Param('id', ParseIntPipe) governmentId: number,
+  @Query() pagination: PaginationDto,
+) {
+  return this._complaintApi.findByGovernmentId(governmentId, pagination);
+}
+
+
   @Get(':id')
   @ApiOperation({ summary: 'Get complaint by ID' })
   @ApiResponse({ type: ComplaintDto })
@@ -113,4 +126,6 @@ export class ComplaintController {
   async delete(@Param('id') id: number) {
     return this._complaintApi.delete(id);
   }
+
+
 }

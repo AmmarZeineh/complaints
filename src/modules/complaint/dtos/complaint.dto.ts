@@ -1,4 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';export class ComplaintDto {
+import { ApiProperty } from '@nestjs/swagger';
+import { Status } from '@prisma/client';
+
+export class ComplaintDto {
   @ApiProperty()
   id: number;
 
@@ -17,17 +20,23 @@ import { ApiProperty } from '@nestjs/swagger';export class ComplaintDto {
   @ApiProperty()
   type: string;
 
-  @ApiProperty({ type: [String] })
-  images: string[];
+   @ApiProperty()
+  documents: string;
 
-  @ApiProperty({ type: [String] })
-  documents: string[];
+  @ApiProperty({ enum: Status })
+  status: Status;
 
   @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt: Date;
+
+ @ApiProperty({ required: false })
+  user?: { id: number; name: string };
+
+  @ApiProperty({ required: false })
+  government?: { id: number; name: string };
 
   constructor(raw: RawComplaint) {
     this.id = raw.id;
@@ -36,14 +45,13 @@ import { ApiProperty } from '@nestjs/swagger';export class ComplaintDto {
     this.description = raw.description;
     this.Location = raw.Location;
     this.type = raw.type;
-    
-    // تحويل JSON string إلى array
-    this.images = raw.images ? JSON.parse(raw.images) : [];
-    this.documents = raw.documents ? JSON.parse(raw.documents) : [];
-    
-    this.createdAt = raw.createdAt;
+    this.documents = raw.documents;
+    this.status = raw.status;
+    this.createdAt = raw.createdAt; 
     this.updatedAt = raw.updatedAt;
-  }
+    this.user = raw.user;
+    this.government = raw.government;
+   }
 }
 
 export type RawComplaint = {
@@ -51,10 +59,18 @@ export type RawComplaint = {
   userId: number;
   governmentId: number;
   description: string;
-  Location: string;
-  type: string;
-  images: string | null;     // JSON string من قاعدة البيانات
-  documents: string | null;  // JSON string من قاعدة البيانات
+  Location:string;
+  documents: string;
+  status: Status;
+  type:string;
   createdAt: Date;
   updatedAt: Date;
+    user?: {
+    id: number;
+    name: string;
+  };
+  government?: {
+    id: number;
+    name: string;
+  };
 };

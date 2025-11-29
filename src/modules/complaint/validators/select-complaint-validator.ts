@@ -9,7 +9,20 @@ export const selectComplaintValidator = () =>
     description: true,
     Location: true,
     documents: true,
+    status: true, 
     images: true,
     createdAt: true,
     updatedAt: true,
+    user: {
+      select: {
+        id: true,
+        name: true,
+      },
+    },
+    government: {
+      select: {
+        id: true,
+        name: true,
+      },
+    },
   });

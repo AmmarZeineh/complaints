@@ -16,5 +16,12 @@ export const selectUserValidator = () => {
         name: true,
       },
     },
+    governmentId:true,
+     government: {
+      select: {
+        id: true,
+        name: true,
+      },
+     },
   });
 };

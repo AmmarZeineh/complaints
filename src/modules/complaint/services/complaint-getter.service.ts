@@ -17,17 +17,21 @@ export class ComplaintGetterService {
     const skip = Math.max(pagination.skip ?? 0, 0);
     const take = pagination.limit ?? 10;
 
-    const where: any = {
-      userId, // ← فلتر حسب المستخدم الحالي
-    };
+  const where: any = {
+  userId,
+};
 
-    // إضافة البحث إذا وُجد
-    if (filter?.search) {
-      where.OR = [
-        { description: { contains: filter.search } },
-        { type: { contains: filter.search } },
-      ];
-    }
+if (filter?.search) {
+  where.OR = [
+    { description: { contains: filter.search } },
+    { type: { contains: filter.search } },
+  ];
+}
+
+if (filter?.status) {
+  where.status = filter.status;
+}
+
 
     const [data, count] = await Promise.all([
       this._prisma.complaint.findMany({
@@ -50,14 +54,18 @@ export class ComplaintGetterService {
     const skip = Math.max(pagination.skip ?? 0, 0);
     const take = pagination.limit ?? 10;
 
-    const where = filter?.search
-      ? {
-          OR: [
-            { description: { contains: filter.search } },
-            { type: { contains: filter.search } },
-          ],
-        }
-      : {};
+  const where: any = {};
+
+if (filter?.search) {
+  where.OR = [
+    { description: { contains: filter.search } },
+    { type: { contains: filter.search } },
+  ];
+}
+
+if (filter?.status) {
+  where.status = filter.status;
+}
 
     const [data, count] = await Promise.all([
       this._prisma.complaint.findMany({
@@ -68,7 +76,6 @@ export class ComplaintGetterService {
       }),
       this._prisma.complaint.count({ where }),
     ]);
-
     return new FindAllComplaintDto(count, data);
   }
 
@@ -78,4 +85,29 @@ export class ComplaintGetterService {
       select: selectComplaintValidator(),
     });
   }
+
+ async findByGovernmentId(
+  governmentId: number,
+  pagination: PaginationDto,
+): Promise<FindAllComplaintDto> {
+  const skip = Math.max(pagination.skip ?? 0, 0);
+  const take = pagination.limit ?? 10;
+
+
+  const where = { governmentId: governmentId, deletedAt: null };
+
+  const [data, count] = await Promise.all([
+    this._prisma.complaint.findMany({
+      where,
+      skip,
+      take,
+      orderBy: { createdAt: 'desc' },
+      select: selectComplaintValidator(),
+    }),
+    this._prisma.complaint.count({ where }),
+  ]);
+
+  return new FindAllComplaintDto(count, data);
+}
+
 }

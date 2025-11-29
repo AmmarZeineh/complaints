@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { GovernmentDto, RawGovernment } from 'src/modules/government/dtos/government.dto';
 
 export class UserDto {
   @ApiProperty()
@@ -26,6 +27,11 @@ export class UserDto {
   roleId: number;
 
 
+  @ApiProperty()
+  governmentId: number;
+
+  @ApiProperty({ required: false, type: () => GovernmentDto })
+  government?: GovernmentDto; 
 
   constructor(raw: RawUser) {
     this.id = raw.id;
@@ -36,10 +42,26 @@ export class UserDto {
     this.updatedAt = raw.updatedAt;
     this.isEmailVerified=raw.isEmailVerified;
     this.roleId=raw.roleId;
+    this.governmentId=raw.governmentId;
+
+    this.government = raw.government
+      ? new GovernmentDto(raw.government)
+      : undefined;
    }
 }
 
-export type RawUser = Omit<UserDto, 'password'> & {
+export type RawUser = {
+  id: number;
+  name: string;
+  nationalID: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  email: string;
+  isEmailVerified: boolean;
+  roleId: number;
+  governmentId: number;
+
+  government?: RawGovernment | null; 
 };
 
 
