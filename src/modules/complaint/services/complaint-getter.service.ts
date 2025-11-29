@@ -9,7 +9,28 @@ import { selectComplaintValidator } from '../validators/select-complaint-validat
 export class ComplaintGetterService {
   constructor(private readonly _prisma: PrismaService) {}
 
-    async findMyComplaints(
+  // ✅ Helper function لتحويل JSON strings لـ arrays
+  private parseComplaintData(complaint: any) {
+    if (!complaint) return null;
+
+    return {
+      ...complaint,
+      images: this.parseJsonField(complaint.images),
+      documents: this.parseJsonField(complaint.documents),
+    };
+  }
+
+  private parseJsonField(field: string | null | undefined): string[] {
+    if (!field) return [];
+    try {
+      const parsed = JSON.parse(field);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async findMyComplaints(
     userId: number,
     pagination: PaginationDto,
     filter?: ComplaintFilterDto,
@@ -17,34 +38,36 @@ export class ComplaintGetterService {
     const skip = Math.max(pagination.skip ?? 0, 0);
     const take = pagination.limit ?? 10;
 
-  const where: any = {
-  userId,
-};
+    const where: any = {
+      userId,
+      deletedAt: null,
+    };
 
-if (filter?.search) {
-  where.OR = [
-    { description: { contains: filter.search } },
-    { type: { contains: filter.search } },
-  ];
-}
+    if (filter?.search) {
+      where.OR = [
+        { description: { contains: filter.search } },
+        { type: { contains: filter.search } },
+      ];
+    }
 
-if (filter?.status) {
-  where.status = filter.status;
-}
-
+    if (filter?.status) {
+      where.status = filter.status;
+    }
 
     const [data, count] = await Promise.all([
       this._prisma.complaint.findMany({
         where,
         skip,
         take,
-        orderBy: { createdAt: 'desc' }, // ← الأحدث أولاً
         select: selectComplaintValidator(),
       }),
       this._prisma.complaint.count({ where }),
     ]);
 
-    return new FindAllComplaintDto(count, data);
+    // ✅ تحويل كل الشكاوى
+    const parsedData = data.map((complaint) => this.parseComplaintData(complaint));
+
+    return new FindAllComplaintDto(count, parsedData);
   }
 
   async findAll(
@@ -54,18 +77,20 @@ if (filter?.status) {
     const skip = Math.max(pagination.skip ?? 0, 0);
     const take = pagination.limit ?? 10;
 
-  const where: any = {};
+    const where: any = {
+      deletedAt: null,
+    };
 
-if (filter?.search) {
-  where.OR = [
-    { description: { contains: filter.search } },
-    { type: { contains: filter.search } },
-  ];
-}
+    if (filter?.search) {
+      where.OR = [
+        { description: { contains: filter.search } },
+        { type: { contains: filter.search } },
+      ];
+    }
 
-if (filter?.status) {
-  where.status = filter.status;
-}
+    if (filter?.status) {
+      where.status = filter.status;
+    }
 
     const [data, count] = await Promise.all([
       this._prisma.complaint.findMany({
@@ -76,16 +101,22 @@ if (filter?.status) {
       }),
       this._prisma.complaint.count({ where }),
     ]);
-    return new FindAllComplaintDto(count, data);
+
+    // ✅ تحويل كل الشكاوى
+    const parsedData = data.map((complaint) => this.parseComplaintData(complaint));
+
+    return new FindAllComplaintDto(count, parsedData);
   }
 
   async findOne(id: number) {
-    return this._prisma.complaint.findUniqueOrThrow({
-      where: { id },
+    const complaint = await this._prisma.complaint.findUniqueOrThrow({
+      where: { id, deletedAt: null },
       select: selectComplaintValidator(),
     });
-  }
 
+    // ✅ تحويل البيانات
+    return this.parseComplaintData(complaint);
+  }
  async findByGovernmentId(
   governmentId: number,
   pagination: PaginationDto,
@@ -109,5 +140,4 @@ if (filter?.status) {
 
   return new FindAllComplaintDto(count, data);
 }
-
 }

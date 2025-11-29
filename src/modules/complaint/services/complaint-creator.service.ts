@@ -1,9 +1,10 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
-import * as path from 'path';
-import * as fs from 'fs';
+import { join, extname } from 'path';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { selectComplaintValidator } from '../validators/select-complaint-validator';
 import { CreateComplaintDto } from '../dtos/create-complaint.dto';
+
 @Injectable()
 export class ComplaintCreatorService {
   private readonly MAX_IMAGES = 10;
@@ -20,83 +21,168 @@ export class ComplaintCreatorService {
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   ];
 
+  private readonly BASE_URL = 'http://localhost:3000';
+
   constructor(private readonly _prisma: PrismaService) {}
 
   async create(
-  dto: CreateComplaintDto, 
-  userId: number, 
-  files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] }
-) {
-  // أولاً، إنشاء الشكوى بدون ملفات
-  const raw = await this._prisma.complaint.create({
-    data: {
-      userId,
-      governmentId: dto.governmentId,
-      description: dto.description,
-      Location: dto.Location,
-      type: dto.type,
-    },
-    select: selectComplaintValidator(),
-  });
+    dto: CreateComplaintDto, 
+    userId: number, 
+    files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] }
+  ) {
+ 
+    // التحقق من عدد وحجم الملفات
+    this.validateFiles(files);
 
-  // ثم حفظ الملفات بعد معرفة الـ complaintId و userId
-  const { imagePaths, documentPaths } = await this.processFiles(files, raw.id, userId);
+    // إنشاء الشكوى أولاً
+    const complaint = await this._prisma.complaint.create({
+      data: {
+        userId,
+        governmentId: dto.governmentId,
+        description: dto.description,
+        Location: dto.Location,
+        type: dto.type,
+      },
+      select: selectComplaintValidator(),
+    });
 
-  // تحديث الشكوى لإضافة مسارات الملفات
-  const updated = await this._prisma.complaint.update({
-    where: { id: raw.id },
-    data: {
-      images: JSON.stringify(imagePaths),
-      documents: JSON.stringify(documentPaths),
-    },
-    select: selectComplaintValidator(),
-  });
+    // حفظ الملفات والحصول على URLs
+    const { imageUrls, documentUrls } = await this.processFiles(
+      files, 
+      complaint.id, 
+      userId
+    );
 
-  return updated;
-}
+ 
 
-private async processFiles(
-  files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] },
-  complaintId?: number,
-  userId?: number
-) {
-  const imagePaths: string[] = [];
-  const documentPaths: string[] = [];
+    // تحديث الشكوى بمسارات الملفات (حفظ كـ JSON string)
+    const updatedComplaint = await this._prisma.complaint.update({
+      where: { id: complaint.id },
+      data: {
+        images: imageUrls.length > 0 ? JSON.stringify(imageUrls) : null,
+        documents: documentUrls.length > 0 ? JSON.stringify(documentUrls) : null,
+      },
+      select: selectComplaintValidator(),
+    });
 
-  if (!files || !complaintId || !userId) return { imagePaths, documentPaths };
-
-  const images = files.images || [];
-  const documents = files.documents || [];
-
-  for (const image of images) {
-    const savedPath = await this.saveFile(image, 'images', complaintId, userId);
-    imagePaths.push(savedPath);
+    // إرجاع البيانات مع تحويل JSON strings لـ arrays
+    return {
+      ...updatedComplaint,
+      images: updatedComplaint.images ? JSON.parse(updatedComplaint.images) : [],
+      documents: updatedComplaint.documents ? JSON.parse(updatedComplaint.documents) : [],
+    };
   }
 
-  for (const doc of documents) {
-    const savedPath = await this.saveFile(doc, 'documents', complaintId, userId);
-    documentPaths.push(savedPath);
+  private validateFiles(
+    files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] }
+  ) {
+    if (!files) return;
+
+    const images = files.images || [];
+    const documents = files.documents || [];
+
+    // التحقق من عدد الصور
+    if (images.length > this.MAX_IMAGES) {
+      throw new BadRequestException(`Maximum ${this.MAX_IMAGES} images allowed`);
+    }
+
+    // التحقق من عدد المستندات
+    if (documents.length > this.MAX_DOCUMENTS) {
+      throw new BadRequestException(`Maximum ${this.MAX_DOCUMENTS} documents allowed`);
+    }
+
+    // التحقق من نوع وحجم الصور
+    images.forEach((image, index) => {
+     
+
+      if (!this.ALLOWED_IMAGE_TYPES.includes(image.mimetype)) {
+        throw new BadRequestException(`Invalid image type: ${image.mimetype}`);
+      }
+      if (image.size > this.MAX_IMAGE_SIZE) {
+        throw new BadRequestException(`Image ${image.originalname} exceeds 5MB limit`);
+      }
+    });
+
+    // التحقق من نوع وحجم المستندات
+    documents.forEach((doc, index) => {
+    
+
+      if (!this.ALLOWED_DOCUMENT_TYPES.includes(doc.mimetype)) {
+        throw new BadRequestException(`Invalid document type: ${doc.mimetype}`);
+      }
+      if (doc.size > this.MAX_DOCUMENT_SIZE) {
+        throw new BadRequestException(`Document ${doc.originalname} exceeds 10MB limit`);
+      }
+    });
   }
 
-  return { imagePaths, documentPaths };
-}
+  private async processFiles(
+    files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] },
+    complaintId?: number,
+    userId?: number
+  ) {
+    const imageUrls: string[] = [];
+    const documentUrls: string[] = [];
 
-private async saveFile(
-  file: Express.Multer.File, 
-  subDir: 'images' | 'documents', 
-  complaintId: number,
-  userId: number
-): Promise<string> {
-  const dir = path.join('uploads', 'complaints', `user_${userId}`, `complaint_${complaintId}`, subDir);
-  
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!files || !complaintId || !userId) {
+      return { imageUrls, documentUrls };
+    }
 
-  const fileName = `${Date.now()}_${file.originalname}`;
-  const filePath = path.join(dir, fileName);
+    const images = files.images || [];
+    const documents = files.documents || [];
 
-  fs.writeFileSync(filePath, file.buffer);
+    // إنشاء المجلدات
+    const baseUpload = join(process.cwd(), 'uploads', String(userId), 'complaints', String(complaintId));
+    const imagesDir = join(baseUpload, 'images');
+    const documentsDir = join(baseUpload, 'documents');
 
-  return filePath;
-}
+    [imagesDir, documentsDir].forEach((dir) => {
+      if (!existsSync(dir)) {
+        mkdirSync(dir, { recursive: true });
+      }
+    });
 
+    // حفظ الصور
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      const url = await this.saveFile(image, imagesDir, userId, complaintId, 'images', i);
+      imageUrls.push(url);
+    }
+
+    // حفظ المستندات
+    for (let i = 0; i < documents.length; i++) {
+      const doc = documents[i];
+      const url = await this.saveFile(doc, documentsDir, userId, complaintId, 'documents', i);
+      documentUrls.push(url);
+    }
+
+    return { imageUrls, documentUrls };
+  }
+
+  private async saveFile(
+    file: Express.Multer.File, 
+    directory: string,
+    userId: number,
+    complaintId: number,
+    type: 'images' | 'documents',
+    index: number
+  ): Promise<string> {
+    // إنشاء اسم فريد للملف باستخدام index لتجنب التكرار
+    const timestamp = Date.now();
+    const ext = extname(file.originalname);
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9]/g, '_').split('.')[0];
+    const filename = `${timestamp}_${index}_${safeName}${ext}`;
+    
+    // المسار الكامل للحفظ
+    const filepath = join(directory, filename);
+    
+    // حفظ الملف
+    writeFileSync(filepath, file.buffer);
+
+
+    // إرجاع URL للوصول للملف
+    const fileUrl = `${this.BASE_URL}/uploads/${userId}/complaints/${complaintId}/${type}/${filename}`;
+    
+    return fileUrl;
+  }
 }

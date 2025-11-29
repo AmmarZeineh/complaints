@@ -1,9 +1,9 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { UpdateComplaintDto } from '../dtos/update-complaint.dto';
 import { selectComplaintValidator } from '../validators/select-complaint-validator';
-import path from 'path';
-import * as fs from 'fs';
+import { join, extname } from 'path';
+import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 
 @Injectable()
 export class ComplaintUpdaterService {
@@ -21,16 +21,19 @@ export class ComplaintUpdaterService {
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   ];
 
+  private readonly BASE_URL = 'http://localhost:3000';
+
   constructor(private readonly _prisma: PrismaService) {}
 
   async update(
     id: number,
     dto: UpdateComplaintDto,
     userId: number,
-    files?: Express.Multer.File[],
-  ) {
+    files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] },
+  ): Promise<any> {
+    // جلب الشكوى الحالية
     const existingComplaint = await this._prisma.complaint.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
     });
 
     if (!existingComplaint) {
@@ -41,120 +44,191 @@ export class ComplaintUpdaterService {
       throw new BadRequestException('لا يمكنك تعديل شكوى مستخدم آخر');
     }
 
+    // ✅ التحقق من الملفات الجديدة قبل البدء
+    this.validateFiles(files);
+
     const updateData: any = {};
 
+    // تحديث الحقول النصية
     if (dto.description !== undefined) updateData.description = dto.description;
     if (dto.type !== undefined) updateData.type = dto.type;
     if (dto.Location !== undefined) updateData.Location = dto.Location;
 
-    // معالجة الصور
-    let currentImages: string[] = existingComplaint.images 
-      ? JSON.parse(existingComplaint.images) 
-      : [];
-    
-    if (dto.deleteAllImages) {
+    // ✅ معالجة الصور
+    let currentImages = this.parseJsonField(existingComplaint.images);
+
+    if (dto.deleteAllImages === true) {
       this.deleteFilesFromDisk(currentImages);
       currentImages = [];
     } else if (dto.imagesToDelete && dto.imagesToDelete.length > 0) {
-      for (const imgName of dto.imagesToDelete) {
-        const imgPath = currentImages.find(p => p.includes(imgName));
-        if (imgPath) {
-          this.deleteFileFromDisk(imgPath);
-          currentImages = currentImages.filter(p => p !== imgPath);
+      for (const identifier of dto.imagesToDelete) {
+        const imageUrl = currentImages.find(url => 
+          url === identifier || url.includes(identifier)
+        );
+        
+        if (imageUrl) {
+          this.deleteFileFromUrl(imageUrl);
+          const index = currentImages.indexOf(imageUrl);
+          currentImages.splice(index, 1);
         }
       }
     }
 
-    if (files && files.length > 0) {
-      const newImages = files.filter(f => this.ALLOWED_IMAGE_TYPES.includes(f.mimetype));
-      
-      if (currentImages.length + newImages.length > this.MAX_IMAGES) {
+    // إضافة صور جديدة
+    if (files?.images && files.images.length > 0) {
+      if (currentImages.length + files.images.length > this.MAX_IMAGES) {
         throw new BadRequestException(
           `لا يمكن إضافة أكثر من ${this.MAX_IMAGES} صور. لديك حالياً ${currentImages.length} صور`
         );
       }
 
-      for (const img of newImages) {
-        if (img.size > this.MAX_IMAGE_SIZE) {
-          throw new BadRequestException(`حجم الصورة ${img.originalname} كبير جداً`);
-        }
-        const savedPath = await this.saveFile(img, 'images');
-        currentImages.push(savedPath);
+      for (const img of files.images) {
+        const url = await this.saveFile(img, existingComplaint.userId, id, 'images', currentImages.length);
+        currentImages.push(url);
       }
     }
 
     updateData.images = JSON.stringify(currentImages);
 
-    // معالجة الملفات
-    let currentDocuments: string[] = existingComplaint.documents 
-      ? JSON.parse(existingComplaint.documents) 
-      : [];
-    
-    if (dto.deleteAllDocuments) {
+    // ✅ معالجة المستندات
+    let currentDocuments = this.parseJsonField(existingComplaint.documents);
+
+    if (dto.deleteAllDocuments === true) {
       this.deleteFilesFromDisk(currentDocuments);
       currentDocuments = [];
     } else if (dto.documentsToDelete && dto.documentsToDelete.length > 0) {
-      for (const docName of dto.documentsToDelete) {
-        const docPath = currentDocuments.find(p => p.includes(docName));
-        if (docPath) {
-          this.deleteFileFromDisk(docPath);
-          currentDocuments = currentDocuments.filter(p => p !== docPath);
+      for (const identifier of dto.documentsToDelete) {
+        const docUrl = currentDocuments.find(url => 
+          url === identifier || url.includes(identifier)
+        );
+        
+        if (docUrl) {
+          this.deleteFileFromUrl(docUrl);
+          const index = currentDocuments.indexOf(docUrl);
+          currentDocuments.splice(index, 1);
         }
       }
     }
 
-    if (files && files.length > 0) {
-      const newDocs = files.filter(f => this.ALLOWED_DOCUMENT_TYPES.includes(f.mimetype));
-      
-      if (currentDocuments.length + newDocs.length > this.MAX_DOCUMENTS) {
+    // إضافة مستندات جديدة
+    if (files?.documents && files.documents.length > 0) {
+      if (currentDocuments.length + files.documents.length > this.MAX_DOCUMENTS) {
         throw new BadRequestException(
           `لا يمكن إضافة أكثر من ${this.MAX_DOCUMENTS} ملفات. لديك حالياً ${currentDocuments.length} ملفات`
         );
       }
 
-      for (const doc of newDocs) {
-        if (doc.size > this.MAX_DOCUMENT_SIZE) {
-          throw new BadRequestException(`حجم الملف ${doc.originalname} كبير جداً`);
-        }
-        const savedPath = await this.saveFile(doc, 'documents');
-        currentDocuments.push(savedPath);
+      for (const doc of files.documents) {
+        const url = await this.saveFile(doc, existingComplaint.userId, id, 'documents', currentDocuments.length);
+        currentDocuments.push(url);
       }
     }
 
     updateData.documents = JSON.stringify(currentDocuments);
 
-    return await this._prisma.complaint.update({
+    // تحديث الشكوى في قاعدة البيانات
+    const updated = await this._prisma.complaint.update({
       where: { id },
       data: updateData,
       select: selectComplaintValidator(),
     });
+
+    // إرجاع البيانات مع تحويل JSON strings لـ arrays
+    return {
+      ...updated,
+      images: this.parseJsonField(updated.images),
+      documents: this.parseJsonField(updated.documents),
+    };
+  }
+
+  // ✅ Validation للملفات الجديدة
+  private validateFiles(
+    files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] }
+  ) {
+    if (!files) return;
+
+    const images = files.images || [];
+    const documents = files.documents || [];
+
+    // التحقق من نوع وحجم الصور
+    images.forEach((image) => {
+      if (!this.ALLOWED_IMAGE_TYPES.includes(image.mimetype)) {
+        throw new BadRequestException(
+          `نوع الصورة غير مسموح: ${image.originalname}. الأنواع المسموحة: JPEG, JPG, PNG, GIF`
+        );
+      }
+      if (image.size > this.MAX_IMAGE_SIZE) {
+        throw new BadRequestException(
+          `حجم الصورة ${image.originalname} كبير جداً. الحد الأقصى: 5MB`
+        );
+      }
+    });
+
+    // التحقق من نوع وحجم المستندات
+    documents.forEach((doc) => {
+      if (!this.ALLOWED_DOCUMENT_TYPES.includes(doc.mimetype)) {
+        throw new BadRequestException(
+          `نوع المستند غير مسموح: ${doc.originalname}. الأنواع المسموحة: PDF, DOC, DOCX, XLS, XLSX`
+        );
+      }
+      if (doc.size > this.MAX_DOCUMENT_SIZE) {
+        throw new BadRequestException(
+          `حجم المستند ${doc.originalname} كبير جداً. الحد الأقصى: 10MB`
+        );
+      }
+    });
+  }
+
+  private parseJsonField(field: string | null | undefined): string[] {
+    if (!field) return [];
+    try {
+      const parsed = JSON.parse(field);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
 
   private async saveFile(
     file: Express.Multer.File,
-    subDir: 'images' | 'documents'
+    userId: number,
+    complaintId: number,
+    type: 'images' | 'documents',
+    index: number,
   ): Promise<string> {
-    const dir = path.join('uploads', 'complaints', subDir);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    const baseUpload = join(process.cwd(), 'uploads', String(userId), 'complaints', String(complaintId));
+    const directory = join(baseUpload, type);
+
+    if (!existsSync(directory)) {
+      mkdirSync(directory, { recursive: true });
     }
-    const fileName = `${Date.now()}_${file.originalname}`;
-    const filePath = path.join(dir, fileName);
-    fs.writeFileSync(filePath, file.buffer);
-    return filePath;
+
+    const timestamp = Date.now();
+    const ext = extname(file.originalname);
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9]/g, '_').split('.')[0];
+    const filename = `${timestamp}_${index}_${safeName}${ext}`;
+    
+    const filepath = join(directory, filename);
+    writeFileSync(filepath, file.buffer);
+
+    const fileUrl = `${this.BASE_URL}/uploads/${userId}/complaints/${complaintId}/${type}/${filename}`;
+    return fileUrl;
   }
 
-  private deleteFileFromDisk(filePath: string) {
-    if (fs.existsSync(filePath)) {
-      try {
-        fs.unlinkSync(filePath);
-      } catch (error) {
-        console.error('فشل حذف الملف:', error);
+  private deleteFileFromUrl(url: string) {
+    try {
+      const urlPath = url.replace(this.BASE_URL + '/', '');
+      const filePath = join(process.cwd(), urlPath);
+      
+      if (existsSync(filePath)) {
+        unlinkSync(filePath);
       }
+    } catch (error) {
+      // Silent fail - الملف قد يكون محذوف مسبقاً
     }
   }
 
-  private deleteFilesFromDisk(filePaths: string[]) {
-    filePaths.forEach(path => this.deleteFileFromDisk(path));
+  private deleteFilesFromDisk(urls: string[]) {
+    urls.forEach(url => this.deleteFileFromUrl(url));
   }
 }

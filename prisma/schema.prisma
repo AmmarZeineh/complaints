@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
-}
+  }
 
 model UserRole {
   id        Int       @id @default(autoincrement())
@@ -56,8 +56,8 @@ model UserRole {
   type          String
   Location      String
   description   String
-  images       String?   @db.Text  // JSON string مخزن كـ Text
-  documents    String?   @db.Text  // JSON string مخزن كـ Text
+  images       String?   @db.Text  
+  documents    String?   @db.Text  
   status        Status   @default(NEW)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt()
@@ -67,6 +67,7 @@ model UserRole {
   notes         ComplaintNote[]
 
 }
+
 enum Status {
   NEW
   INPROCESS
