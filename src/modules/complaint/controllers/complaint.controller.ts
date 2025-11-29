@@ -103,18 +103,25 @@ async findByGovernment(
   async findOne(@Param('id') id: number) {
     return this._complaintApi.findOne(id);
   }
-
-  @ApiBearerAuth('access-token')
+ @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'))
   @Patch(':id')
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FilesInterceptor('files', 15))
-  @ApiOperation({ summary: 'Update complaint with multiple files' })
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'images', maxCount: 10 },
+      { name: 'documents', maxCount: 5 },
+    ])
+  )
+  @ApiOperation({ summary: 'Update complaint with images and documents' })
   async update(
     @Param('id') id: number,
     @Body() dto: UpdateComplaintDto,
     @Req() req: any,
-    @UploadedFiles() files?: Express.Multer.File[],
+    @UploadedFiles() files?: {
+      images?: Express.Multer.File[];
+      documents?: Express.Multer.File[];
+    },
   ) {
     const userId = Number(req.user.id);
     return this._complaintApi.update(id, dto, userId, files);

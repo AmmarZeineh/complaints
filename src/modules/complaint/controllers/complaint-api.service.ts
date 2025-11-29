@@ -21,7 +21,7 @@ export class ComplaintApiService {
   async create(
   dto: CreateComplaintDto, 
   userId: number, 
-  files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] } // ← هنا التعديل
+  files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] } 
 ) {
   const raw = await this._creator.create(dto, userId, files); // تمرير الكائن كما هو
   return new ComplaintDto(raw);
@@ -39,7 +39,7 @@ export class ComplaintApiService {
     id: number, 
     dto: UpdateComplaintDto, 
     userId: number, 
-    files?: Express.Multer.File[]
+  files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] } 
   ) {
     const raw = await this._updater.update(id, dto, userId, files);
     return new ComplaintDto(raw);
