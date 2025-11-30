@@ -19,6 +19,7 @@ import { EmailVerificationModule } from '../emailVerfication/EmailVerficationMod
     UserDeleteService,
   ],
   exports: [
+    UserApiService,
     UserGetterService,
     UserCreatorService,
     UserUpdaterService,

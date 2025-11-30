@@ -1,0 +1,7 @@
+[
+  {
+    "id": 1,
+    "roleId": 2,
+   "permissions": [1, 2, 3]
+  }
+]

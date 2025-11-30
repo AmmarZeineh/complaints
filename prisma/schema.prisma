@@ -12,11 +12,32 @@ model UserRole {
   id        Int       @id @default(autoincrement())
   name      String    @unique
   users User[]
+  rolePermissions UserRolePermission[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt()
   deletedAt DateTime?
 }
 
+model Permission {
+  id              Int                  @id @default(autoincrement())
+  name            String               @unique
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt()
+  deletedAt       DateTime?
+  rolePermissions UserRolePermission[]
+}
+
+model UserRolePermission {
+  id           Int        @id @default(autoincrement())
+  userRoleId   Int
+  permissionId Int
+  userRole     UserRole   @relation(fields: [userRoleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt()
+  deletedAt    DateTime?
+  @@index([userRoleId, permissionId])
+}
 
   model User {
     id          Int       @id @default(autoincrement())
@@ -29,6 +50,7 @@ model UserRole {
     tokens            UserToken[]  
     notifications     Notification[] 
     complaints          Complaint[] 
+    notes         ComplaintNote[]
     roleId Int
     role   UserRole @relation(fields: [roleId], references: [id])
     isEmailVerified   Boolean  @default(false)
@@ -64,6 +86,8 @@ model UserRole {
   deletedAt   DateTime?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   government  Government  @relation(fields: [governmentId], references: [id], onDelete: Cascade)
+  notes         ComplaintNote[]
+
 }
 
 enum Status {
@@ -71,7 +95,27 @@ enum Status {
   INPROCESS
   COMPLETED
   REJECTED
+<<<<<<< HEAD
 } 
+=======
+}
+
+model ComplaintNote {
+  id           Int       @id @default(autoincrement())
+  complaintId  Int
+  userId       Int       
+  content      String    @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt()
+  deletedAt    DateTime?
+  
+  complaint    Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id])
+  
+  @@index([complaintId])
+  @@index([userId])
+}
+>>>>>>> f3b7d48919ccdcea380db48d3d46270aa9de987d
 
   model EmailVerification {
   id        Int      @id @default(autoincrement())

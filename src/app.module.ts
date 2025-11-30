@@ -12,6 +12,9 @@ import { NotificationModule } from './modules/notification/notificationModule';
 import { ScheduleModule } from '@nestjs/schedule';
 import { GivernmentModule } from './modules/government/government.module';
 import { ComplaintModule } from './modules/complaint/complaint.module';
+import { ComplaintNoteModule } from './modules/complaintNote/complaintNote.module';
+import { PermissionModule } from './modules/permission/permission.module';
+import { UserRolePermissionModule } from './modules/userRolePermission/userRolePermission.module';
 
 
 
@@ -31,6 +34,9 @@ import { ComplaintModule } from './modules/complaint/complaint.module';
     NotificationModule,
     GivernmentModule,
     ComplaintModule,
+    ComplaintNoteModule,
+    PermissionModule,
+    UserRolePermissionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
