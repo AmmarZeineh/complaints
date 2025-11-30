@@ -95,10 +95,9 @@ enum Status {
   INPROCESS
   COMPLETED
   REJECTED
-<<<<<<< HEAD
+
 } 
-=======
-}
+
 
 model ComplaintNote {
   id           Int       @id @default(autoincrement())
@@ -115,7 +114,6 @@ model ComplaintNote {
   @@index([complaintId])
   @@index([userId])
 }
->>>>>>> f3b7d48919ccdcea380db48d3d46270aa9de987d
 
   model EmailVerification {
   id        Int      @id @default(autoincrement())
