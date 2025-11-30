@@ -12,11 +12,32 @@ model UserRole {
   id        Int       @id @default(autoincrement())
   name      String    @unique
   users User[]
+  rolePermissions UserRolePermission[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt()
   deletedAt DateTime?
 }
 
+model Permission {
+  id              Int                  @id @default(autoincrement())
+  name            String               @unique
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt()
+  deletedAt       DateTime?
+  rolePermissions UserRolePermission[]
+}
+
+model UserRolePermission {
+  id           Int        @id @default(autoincrement())
+  userRoleId   Int
+  permissionId Int
+  userRole     UserRole   @relation(fields: [userRoleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt()
+  deletedAt    DateTime?
+  @@index([userRoleId, permissionId])
+}
 
   model User {
     id          Int       @id @default(autoincrement())
