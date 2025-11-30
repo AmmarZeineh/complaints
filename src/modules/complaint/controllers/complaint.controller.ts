@@ -31,6 +31,7 @@ import { PaginationDto } from 'src/common/filter/pagination/pagination-param.dto
 import { ComplaintDto } from '../dtos/complaint.dto';
 import { FindAllComplaintDto } from '../dtos/find-all-complaint.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { UpdateComplaintStatusDto } from '../dtos/udpate-status.dto';
 
 
 @ApiTags('Complaint')
@@ -39,24 +40,46 @@ export class ComplaintController {
   constructor(private readonly _complaintApi: ComplaintApiService) {}
 
 
+
+   @ApiBearerAuth('access-token')
+   @UseGuards(AuthGuard('jwt'))
+   @Post(':id/assign')
+   async assignComplaint(
+    @Param('id') id: number,
+    @Req() req: any
+  ) {
+    const employeeId = req.user.id; 
+    return this._complaintApi.assignComplaint(id, employeeId);
+  }
+
+  @ApiBearerAuth('access-token')
+@UseGuards(AuthGuard('jwt'))
+@Patch(':id/status')
+async updateStatus(
+  @Param('id') id: number,
+  @Body() dto: UpdateComplaintStatusDto
+) {
+  return this._complaintApi.updateStatus(id, dto.status);
+}
+
     @ApiBearerAuth('access-token')
     @UseGuards(AuthGuard('jwt'))
     @Post()
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(
-  FileFieldsInterceptor([
+      FileFieldsInterceptor([
     { name: 'images', maxCount: 10 },
     { name: 'documents', maxCount: 5 },
-  ])
+    ])
     )
     @ApiOperation({ summary: 'Create a new complaint with multiple files' })
     @ApiResponse({ type: ComplaintDto })
     async create(
-      @Body() dto: CreateComplaintDto,
-      @Req() req,
-  @UploadedFiles() files: {
-    images?: Express.Multer.File[],
-    documents?: Express.Multer.File[]
+    @Body() dto: CreateComplaintDto,
+    @Req() req,
+    @UploadedFiles() files: {
+      images?: Express.Multer.File[],
+      documents?: Express.Multer.File[]
   },    ) {
       const userId = Number(req.user.id);
       return this._complaintApi.create(dto, userId, files);
@@ -73,7 +96,7 @@ export class ComplaintController {
   }
 
 
-   @ApiBearerAuth('access-token')
+  @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'))
   @Get('my-complaints')
   @ApiOperation({ summary: 'Get my complaints' })
@@ -104,7 +127,9 @@ async findByGovernment(
   async findOne(@Param('id') id: number) {
     return this._complaintApi.findOne(id);
   }
- @ApiBearerAuth('access-token')
+
+
+  @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'))
   @Patch(':id')
   @ApiConsumes('multipart/form-data')
@@ -128,11 +153,16 @@ async findByGovernment(
     return this._complaintApi.update(id, dto, userId, files);
   }
 
+ 
+
+
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete complaint' })
   async delete(@Param('id') id: number) {
     return this._complaintApi.delete(id);
   }
+
 
 
 }

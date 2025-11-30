@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { UpdateComplaintDto } from '../dtos/update-complaint.dto';
 import { selectComplaintValidator } from '../validators/select-complaint-validator';
 import { join, extname } from 'path';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
+import { Status } from '@prisma/client';
+import { NotificationService } from 'src/modules/notification/notification.service';
 
 @Injectable()
 export class ComplaintUpdaterService {
@@ -23,7 +25,10 @@ export class ComplaintUpdaterService {
 
   private readonly BASE_URL = 'http://localhost:3000';
 
-  constructor(private readonly _prisma: PrismaService) {}
+  constructor(
+    private readonly _prisma: PrismaService,  
+    private readonly notificationService:NotificationService
+) {}
 
   async update(
     id: number,
@@ -231,4 +236,131 @@ export class ComplaintUpdaterService {
   private deleteFilesFromDisk(urls: string[]) {
     urls.forEach(url => this.deleteFileFromUrl(url));
   }
+
+
+
+  async assignComplaint(complaintId: number, employeeId: number) {
+
+  const user = await this._prisma.user.findUnique({
+    where: { id: employeeId },
+    include: { role: true }, // مهم حتى يجيب نوع الدور
+  });
+
+  if (!user) {
+    throw new NotFoundException("User not found");
+  }
+
+  // 2. تحقق إنو موظّف فعلياً
+  if (user.role.name !== "EMPLOYEE") {
+    throw new ForbiddenException("Only employees can assign complaints");
+  }
+
+
+  const complaint = await this._prisma.complaint.findUnique({
+    where: { id: complaintId },
+  });
+
+  if (!complaint) {
+    throw new NotFoundException("Complaint not found");
+  }
+
+  if (complaint.employeeId !== null && complaint.status !== "NEW") {
+    throw new BadRequestException("Complaint already assigned to another employee");
+  }
+
+  if (complaint.status !== "NEW") {
+    throw new BadRequestException("Complaint is not available for assignment");
+  }
+
+    // 4. إرسال الإشعارات لصاحب الشكوى
+  const tokens = await this._prisma.userToken.findMany({
+    where: { userId: complaint.userId },
+  });
+
+  const title = "تم استلام الشكوى الخاصة بك";
+
+  for (const t of tokens) {
+    const body = `تم استلام شكواك رقم ${complaint.id} من قبل الموظف وهي الآن قيد المعالجة.`;
+
+    // إرسال الإشعار عبر FCM
+    await this.notificationService.sendNotification(t.fcmToken, title, body);
+
+    // حفظ الإشعار في قاعدة البيانات
+    await this._prisma.notification.create({
+      data: {
+        userId: complaint.userId,
+        title,
+        body,
+        type: "COMPLAINT_ASSIGNED",
+        data: {
+          complaintId: complaint.id,
+        },
+      },
+    });
+  }
+
+  return await this._prisma.complaint.update({
+    where: { id: complaintId },
+    data: {
+      employeeId,
+      status: "INPROCESS",
+    },
+  });
+}
+
+async updateStatus(complaintId: number, newStatus: string) {
+  const complaint = await this._prisma.complaint.findUnique({
+    where: { id: complaintId },
+  });
+
+  if (!complaint) {
+    throw new NotFoundException("Complaint not found");
+  }
+
+  const allowedStatuses = ["NEW", "INPROCESS", "COMPLETED", "REJECTED"];
+
+  if (!allowedStatuses.includes(newStatus)) {
+    throw new BadRequestException("Invalid status value");
+  }
+
+  if (complaint.status === "COMPLETED" || complaint.status === "REJECTED") {
+    throw new BadRequestException("Complaint is already completed or rejected");
+  }
+  
+  
+  const tokens = await this._prisma.userToken.findMany({
+  where: { userId: complaint.userId },
+  });
+for (const t of tokens) {
+  const title = 'تغيير الحالة للشكوى الخاصة بك';
+  const body = `تم تغيير حالة الشكوى الخاصة بك إلى: ${newStatus}`;
+
+
+  // send push
+  await this.notificationService.sendNotification(t.fcmToken, title, body);
+
+  // save in DB
+  await this._prisma.notification.create({
+    data: {
+      userId:  complaint.userId, 
+      title,
+      body,
+      type: 'COMPLAINT_STATUS_CHANGED',
+      data: {
+        complaintId: complaint.id,
+        newStatus: newStatus,
+      },
+    },
+  });
+}
+
+  return this._prisma.complaint.update({
+    where: { id: complaintId },
+    data: {
+      status: newStatus as Status,
+    },
+  });
+}
+
+
 }

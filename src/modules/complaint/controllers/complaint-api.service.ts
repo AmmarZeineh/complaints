@@ -81,4 +81,15 @@ export class ComplaintApiService {
   return this._getter.findByGovernmentId(governmentId, pagination);
 }
 
+  async assignComplaint(
+    complaintId: number,
+    employeeId: number
+  ) {
+    
+    return this._updater.assignComplaint(complaintId, employeeId);
+  }
+  async updateStatus(complaintId: number , status: string) {
+    return this._updater.updateStatus(complaintId,status);
+  }
+
 }

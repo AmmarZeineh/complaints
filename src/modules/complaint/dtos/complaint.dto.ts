@@ -7,6 +7,9 @@ export class ComplaintDto {
 
   @ApiProperty()
   userId: number;
+  
+  @ApiProperty()
+  emplyeeId: number;
 
   @ApiProperty()
   governmentId: number;
