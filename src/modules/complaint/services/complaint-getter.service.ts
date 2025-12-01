@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { PaginationDto } from 'src/common/filter/pagination/pagination-param.dto';
 import { ComplaintFilterDto } from '../dtos/complaint-filter.dto';
@@ -9,17 +9,7 @@ import { selectComplaintValidator } from '../validators/select-complaint-validat
 export class ComplaintGetterService {
   constructor(private readonly _prisma: PrismaService) {}
 
-  // ✅ Helper function لتحويل JSON strings لـ arrays
-  private parseComplaintData(complaint: any) {
-    if (!complaint) return null;
-
-    return {
-      ...complaint,
-      images: this.parseJsonField(complaint.images),
-      documents: this.parseJsonField(complaint.documents),
-    };
-  }
-
+  // ✅ Helper لتحويل JSON strings إلى arrays
   private parseJsonField(field: string | null | undefined): string[] {
     if (!field) return [];
     try {
@@ -28,6 +18,33 @@ export class ComplaintGetterService {
     } catch {
       return [];
     }
+  }
+
+  // ✅ تحويل شكوى واحدة مع الملفات والتفاعلات
+  private async parseComplaintDataWithInteractions(complaint: any) {
+    if (!complaint) return null;
+
+    const parsedComplaint = {
+      ...complaint,
+      images: this.parseJsonField(complaint.images),
+      documents: this.parseJsonField(complaint.documents),
+    };
+
+    // جلب التفاعلات المرتبطة بالشكوى
+    const interactions = await this._prisma.complaintInteraction.findMany({
+      where: { complaintId: complaint.id },
+    });
+
+    const parsedInteractions = interactions.map((i) => ({
+      ...i,
+      images: this.parseJsonField(i.images),
+      documents: this.parseJsonField(i.documents),
+    }));
+
+    return {
+      ...parsedComplaint,
+      interactions: parsedInteractions,
+    };
   }
 
   async findMyComplaints(
@@ -64,8 +81,11 @@ export class ComplaintGetterService {
       this._prisma.complaint.count({ where }),
     ]);
 
-    // ✅ تحويل كل الشكاوى
-    const parsedData = data.map((complaint) => this.parseComplaintData(complaint));
+    const parsedData = await Promise.all(
+      data.map((complaint) =>
+        this.parseComplaintDataWithInteractions(complaint),
+      ),
+    );
 
     return new FindAllComplaintDto(count, parsedData);
   }
@@ -102,8 +122,11 @@ export class ComplaintGetterService {
       this._prisma.complaint.count({ where }),
     ]);
 
-    // ✅ تحويل كل الشكاوى
-    const parsedData = data.map((complaint) => this.parseComplaintData(complaint));
+    const parsedData = await Promise.all(
+      data.map((complaint) =>
+        this.parseComplaintDataWithInteractions(complaint),
+      ),
+    );
 
     return new FindAllComplaintDto(count, parsedData);
   }
@@ -114,30 +137,34 @@ export class ComplaintGetterService {
       select: selectComplaintValidator(),
     });
 
-    // ✅ تحويل البيانات
-    return this.parseComplaintData(complaint);
+    return this.parseComplaintDataWithInteractions(complaint);
   }
- async findByGovernmentId(
-  governmentId: number,
-  pagination: PaginationDto,
-): Promise<FindAllComplaintDto> {
-  const skip = Math.max(pagination.skip ?? 0, 0);
-  const take = pagination.limit ?? 10;
 
+  async findByGovernmentId(
+    governmentId: number,
+    pagination: PaginationDto,
+  ): Promise<FindAllComplaintDto> {
+    const skip = Math.max(pagination.skip ?? 0, 0);
+    const take = pagination.limit ?? 10;
 
-  const where = { governmentId: governmentId, deletedAt: null };
+    const where = { governmentId, deletedAt: null };
 
-  const [data, count] = await Promise.all([
-    this._prisma.complaint.findMany({
-      where,
-      skip,
-      take,
-      orderBy: { createdAt: 'desc' },
-      select: selectComplaintValidator(),
-    }),
-    this._prisma.complaint.count({ where }),
-  ]);
+    const [data, count] = await Promise.all([
+      this._prisma.complaint.findMany({
+        where,
+        skip,
+        take,
+        select: selectComplaintValidator(),
+      }),
+      this._prisma.complaint.count({ where }),
+    ]);
 
-  return new FindAllComplaintDto(count, data);
-}
+    const parsedData = await Promise.all(
+      data.map((complaint) =>
+        this.parseComplaintDataWithInteractions(complaint),
+      ),
+    );
+
+    return new FindAllComplaintDto(count, parsedData);
+  }
 }

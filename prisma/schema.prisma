@@ -53,6 +53,8 @@ model UserRolePermission {
     notes         ComplaintNote[]
     roleId Int
     role   UserRole @relation(fields: [roleId], references: [id])
+      sentInteractions      ComplaintInteraction[] @relation("InteractionSender")
+  receivedInteractions  ComplaintInteraction[] @relation("InteractionReceiver")
     isEmailVerified   Boolean  @default(false)
     createdAt   DateTime  @default(now())
     updatedAt   DateTime  @updatedAt()
@@ -87,7 +89,7 @@ model UserRolePermission {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   government  Government  @relation(fields: [governmentId], references: [id], onDelete: Cascade)
   notes         ComplaintNote[]
-
+  interactions ComplaintInteraction[]
 }
 
 enum Status {
@@ -97,6 +99,31 @@ enum Status {
   REJECTED
 
 } 
+
+model ComplaintInteraction {
+  id           Int              @id @default(autoincrement())
+  complaintId  Int
+  senderId     Int
+  receiverId   Int?             
+  message      String           @db.Text
+  type         InteractionType
+  images       String?          @db.Text  
+  documents    String?          @db.Text 
+  isRead       Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt   DateTime  @updatedAt()
+  deletedAt   DateTime?
+  complaint    Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  sender       User @relation("InteractionSender", fields: [senderId], references: [id])
+  receiver     User? @relation("InteractionReceiver", fields: [receiverId], references: [id])
+  
+  @@index([complaintId])
+  @@index([senderId])
+}
+enum InteractionType {
+  REQUEST_INFO     
+  CITIZEN_RESPONSE  
+}
 
 
 model ComplaintNote {

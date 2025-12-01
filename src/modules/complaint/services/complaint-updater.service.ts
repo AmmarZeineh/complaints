@@ -308,7 +308,7 @@ export class ComplaintUpdaterService {
   });
 }
 
-async updateStatus(complaintId: number, newStatus: string) {
+async updateStatus(complaintId: number, newStatus: string,employeeId:number) {
   const complaint = await this._prisma.complaint.findUnique({
     where: { id: complaintId },
   });
@@ -323,6 +323,10 @@ async updateStatus(complaintId: number, newStatus: string) {
     throw new BadRequestException("Invalid status value");
   }
 
+  if(complaint.employeeId !== employeeId){
+    throw new ForbiddenException("You are not assigned to this complaint");
+  }
+  
   if (complaint.status === "COMPLETED" || complaint.status === "REJECTED") {
     throw new BadRequestException("Complaint is already completed or rejected");
   }
