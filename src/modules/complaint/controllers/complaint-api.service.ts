@@ -90,6 +90,7 @@ export class ComplaintApiService {
     
     return this._updater.assignComplaint(complaintId, employeeId);
   }
+  
   async updateStatus(complaintId: number , status: string,employeeId:number) {
     return this._updater.updateStatus(complaintId,status,employeeId);
   }

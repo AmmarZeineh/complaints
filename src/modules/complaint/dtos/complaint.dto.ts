@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Status } from '@prisma/client';
+import { ComplaintInteractionDto, RawComplaintInteraction } from './ComplaintInteraction.dto';
 
 export class ComplaintDto {
   @ApiProperty()
@@ -7,9 +8,6 @@ export class ComplaintDto {
 
   @ApiProperty()
   userId: number;
-  
-  @ApiProperty()
-  emplyeeId: number;
 
   @ApiProperty()
   governmentId: number;
@@ -23,23 +21,10 @@ export class ComplaintDto {
   @ApiProperty()
   type: string;
 
-  @ApiProperty({
-    type: [String],
-    description: 'Array of document URLs',
-    example: [
-      'http://localhost:3000/uploads/2/complaints/7/documents/1764418348299_0_report.pdf'
-    ]
-  })
+  @ApiProperty({ type: [String] })
   documents: string[];
-  
-  @ApiProperty({
-    type: [String],
-    description: 'Array of image URLs',
-    example: [
-      'http://localhost:3000/uploads/2/complaints/7/images/1764418348297_0_image1.png',
-      'http://localhost:3000/uploads/2/complaints/7/images/1764418348298_1_image2.png'
-    ]
-  })
+
+  @ApiProperty({ type: [String] })
   images: string[];
 
   @ApiProperty({ enum: Status })
@@ -57,6 +42,9 @@ export class ComplaintDto {
   @ApiProperty({ required: false })
   government?: { id: number; name: string };
 
+  @ApiProperty({ type: [ComplaintInteractionDto], required: false })
+  interactions?: ComplaintInteractionDto[];
+
   constructor(raw: RawComplaint) {
     this.id = raw.id;
     this.userId = raw.userId;
@@ -64,35 +52,30 @@ export class ComplaintDto {
     this.description = raw.description;
     this.Location = raw.Location;
     this.type = raw.type;
-    
-    // ✅ تحويل من string أو string[] لـ string[] نهائياً
-    this.documents = this.parseField(raw.documents);
-    this.images = this.parseField(raw.images);
-    
+
+    this.documents = this.parse(raw.documents);
+    this.images = this.parse(raw.images);
+
     this.status = raw.status;
-    this.createdAt = raw.createdAt; 
+    this.createdAt = raw.createdAt;
     this.updatedAt = raw.updatedAt;
+
     this.user = raw.user;
     this.government = raw.government;
+
+    // 🔥 إضافة التفاعلات هنا
+    this.interactions = raw.interactions
+      ? raw.interactions.map((i) => new ComplaintInteractionDto(i))
+      : [];
   }
 
-  private parseField(field: string | string[] | null | undefined): string[] {
-    // إذا كان array بالفعل، إرجاعه مباشرة
-    if (Array.isArray(field)) {
-      return field;
-    }
-    
-    // إذا كان null أو undefined
-    if (!field) {
-      return [];
-    }
-    
-    // إذا كان string، حاول parse كـ JSON
+  private parse(field: string | string[] | null | undefined): string[] {
+    if (Array.isArray(field)) return field;
+    if (!field) return [];
     try {
       const parsed = JSON.parse(field);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
-      // إذا فشل الـ parse، يعني string عادي مش JSON
       return [field];
     }
   }
@@ -104,18 +87,15 @@ export type RawComplaint = {
   governmentId: number;
   description: string;
   Location: string;
-  documents: string | string[];  // ✅ يقبل النوعين
-  images: string | string[];     // ✅ يقبل النوعين
-  status: Status;
   type: string;
+  documents: string | string[];
+  images: string | string[];
+  status: Status;
   createdAt: Date;
   updatedAt: Date;
-  user?: {
-    id: number;
-    name: string;
-  };
-  government?: {
-    id: number;
-    name: string;
-  };
+  user?: { id: number; name: string };
+  government?: { id: number; name: string };
+
+  // 🔥 أضف هذا
+  interactions?: RawComplaintInteraction[];
 };

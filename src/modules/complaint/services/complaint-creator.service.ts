@@ -6,6 +6,8 @@ import { selectComplaintValidator } from '../validators/select-complaint-validat
 import { CreateComplaintDto } from '../dtos/create-complaint.dto';
 import { CreateInteractionDto } from '../dtos/create-interaction.dto';
 import { NotificationService } from 'src/modules/notification/notification.service';
+import e from 'express';
+import { send } from 'process';
 
 @Injectable()
 export class ComplaintCreatorService {
@@ -100,7 +102,15 @@ export class ComplaintCreatorService {
     if (!complaint) {
       throw new BadRequestException('Complaint not found');
     }
-
+    if( senderId !== complaint.userId && senderId !== complaint.employeeId) {
+      throw new BadRequestException('Sender is not part of this complaint');
+    }
+    if(senderId === complaint.userId && !complaint.employeeId) {
+      throw new BadRequestException('Complaint is not assigned to any employee yet');
+    }
+  if(senderId != complaint.employeeId && !complaint.employeeId && type==='REQUEST_INFO') {
+      throw new BadRequestException('Sender is not authorized to interact on this complaint');
+    }
     // 2) تحديد المستقبل
     const receiverId =
       senderId === complaint.userId ? complaint.employeeId : complaint.userId;

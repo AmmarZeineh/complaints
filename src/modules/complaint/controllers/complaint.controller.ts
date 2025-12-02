@@ -62,7 +62,7 @@ export class ComplaintController {
   @Body() dto: UpdateComplaintStatusDto,
   @Req() req:any
   ) {
-    const employeeId = req.userId
+    const employeeId = req.user.id;
   return this._complaintApi.updateStatus(id, dto.status,employeeId);
   }
 

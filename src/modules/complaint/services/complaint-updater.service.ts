@@ -6,6 +6,7 @@ import { join, extname } from 'path';
 import { existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs';
 import { Status } from '@prisma/client';
 import { NotificationService } from 'src/modules/notification/notification.service';
+import { console } from 'inspector';
 
 @Injectable()
 export class ComplaintUpdaterService {
@@ -264,6 +265,17 @@ export class ComplaintUpdaterService {
     throw new NotFoundException("Complaint not found");
   }
 
+  if(complaint.employeeId === employeeId){
+    throw new BadRequestException("You are already assigned to this complaint");
+  }
+
+  if(complaint.userId === employeeId){
+    throw new BadRequestException("You cannot assign a complaint to yourself");
+  }
+  if(complaint.status === "COMPLETED" || complaint.status === "REJECTED"){
+    throw new BadRequestException("Cannot assign a completed or rejected complaint");
+  }
+  
   if (complaint.employeeId !== null && complaint.status !== "NEW") {
     throw new BadRequestException("Complaint already assigned to another employee");
   }
@@ -308,7 +320,7 @@ export class ComplaintUpdaterService {
   });
 }
 
-async updateStatus(complaintId: number, newStatus: string,employeeId:number) {
+async updateStatus(complaintId: number, newStatus: string, employeeId:number) {
   const complaint = await this._prisma.complaint.findUnique({
     where: { id: complaintId },
   });
@@ -322,7 +334,6 @@ async updateStatus(complaintId: number, newStatus: string,employeeId:number) {
   if (!allowedStatuses.includes(newStatus)) {
     throw new BadRequestException("Invalid status value");
   }
-
   if(complaint.employeeId !== employeeId){
     throw new ForbiddenException("You are not assigned to this complaint");
   }
