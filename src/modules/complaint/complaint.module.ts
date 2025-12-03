@@ -7,10 +7,11 @@ import { ComplaintApiService } from './controllers/complaint-api.service';
 import { ComplaintController } from './controllers/complaint.controller';
 import { CommonModule } from '../common/common.module';
 import { EmailVerificationModule } from '../emailVerfication/EmailVerficationModule';
+import { NotificationModule } from '../notification/notificationModule';
 
 @Module({
   controllers: [ComplaintController],
-  imports: [CommonModule,EmailVerificationModule],
+  imports: [CommonModule,EmailVerificationModule,NotificationModule],
   providers: [
     ComplaintApiService,
     ComplaintCreatorService,
