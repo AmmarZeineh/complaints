@@ -9,6 +9,8 @@ import { CreateComplaintDto } from '../dtos/create-complaint.dto';
 import { ComplaintDto } from '../dtos/complaint.dto';
 import { UpdateComplaintDto } from '../dtos/update-complaint.dto';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
+import { CreateInteractionDto } from '../dtos/create-interaction.dto';
+import { InteractionDto } from '../dtos/interaction.dto';
 
 @Injectable()
 export class ComplaintApiService {
@@ -25,7 +27,7 @@ export class ComplaintApiService {
   userId: number, 
   files?: { images?: Express.Multer.File[], documents?: Express.Multer.File[] } 
 ) {
-  const raw = await this._creator.create(dto, userId, files); // تمرير الكائن كما هو
+  const raw = await this._creator.create(dto, userId, files); 
   return new ComplaintDto(raw);
 }
   async findOne(id: number) {
@@ -88,8 +90,26 @@ export class ComplaintApiService {
     
     return this._updater.assignComplaint(complaintId, employeeId);
   }
-  async updateStatus(complaintId: number , status: string) {
-    return this._updater.updateStatus(complaintId,status);
+  
+  async updateStatus(complaintId: number , status: string,employeeId:number) {
+    return this._updater.updateStatus(complaintId,status,employeeId);
   }
 
+
+
+
+
+
+  async createinteraction(
+    dto: CreateInteractionDto,
+    senderId: number,
+    files?: {
+      images?: Express.Multer.File[];
+      documents?: Express.Multer.File[];
+    },
+  ) {
+    const raw = await this._creator.createInteraction(dto, senderId, files);
+    return new InteractionDto(raw);
+  }
 }
+

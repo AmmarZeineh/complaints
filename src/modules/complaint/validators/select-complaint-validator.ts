@@ -25,4 +25,20 @@ export const selectComplaintValidator = () =>
         name: true,
       },
     },
+    // ✅ إضافة التفاعلات
+    interactions: {
+      select: {
+        id: true,
+        complaintId: true,
+        senderId: true,
+        message: true,
+        type: true, 
+        images: true,
+        documents: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc', // اختياري: ترتيب حسب الأحدث
+      },
+    },
   });

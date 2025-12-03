@@ -32,6 +32,8 @@ import { ComplaintDto } from '../dtos/complaint.dto';
 import { FindAllComplaintDto } from '../dtos/find-all-complaint.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { UpdateComplaintStatusDto } from '../dtos/udpate-status.dto';
+import { InteractionDto } from '../dtos/interaction.dto';
+import { CreateInteractionDto } from '../dtos/create-interaction.dto';
 
 
 @ApiTags('Complaint')
@@ -53,14 +55,44 @@ export class ComplaintController {
   }
 
   @ApiBearerAuth('access-token')
-@UseGuards(AuthGuard('jwt'))
-@Patch(':id/status')
-async updateStatus(
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':id/status')
+  async updateStatus(
   @Param('id') id: number,
-  @Body() dto: UpdateComplaintStatusDto
-) {
-  return this._complaintApi.updateStatus(id, dto.status);
-}
+  @Body() dto: UpdateComplaintStatusDto,
+  @Req() req:any
+  ) {
+    const employeeId = req.user.id;
+  return this._complaintApi.updateStatus(id, dto.status,employeeId);
+  }
+
+
+  @ApiBearerAuth('access-token')
+  @UseGuards(AuthGuard('jwt'))
+  @Post('interaction')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'images', maxCount: 10 },
+      { name: 'documents', maxCount: 5 },
+    ]),
+  )
+  @ApiOperation({ summary: 'Create interaction with optional files' })
+  @ApiResponse({ type: InteractionDto })
+  async createinteraction(
+    @Body() dto: CreateInteractionDto,
+    @Req() req,
+    @UploadedFiles()
+    files: {
+      images?: Express.Multer.File[];
+      documents?: Express.Multer.File[];
+    },
+  ) {
+    const userId = Number(req.user.id);
+    return this._complaintApi.createinteraction(dto, userId, files);
+  }
+
+
 
     @ApiBearerAuth('access-token')
     @UseGuards(AuthGuard('jwt'))
@@ -84,6 +116,7 @@ async updateStatus(
       const userId = Number(req.user.id);
       return this._complaintApi.create(dto, userId, files);
     }
+    
 
   @Get()
   @ApiOperation({ summary: 'Get all complaints' })
