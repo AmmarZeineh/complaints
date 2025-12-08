@@ -46,15 +46,16 @@ model UserRolePermission {
     email       String    @unique
     password    String
     governmentId Int? 
-    government   Government? @relation(fields: [governmentId], references: [id])
+    government        Government? @relation(fields: [governmentId], references: [id])
     tokens            UserToken[]  
     notifications     Notification[] 
-    complaints          Complaint[] 
-    notes         ComplaintNote[]
+    complaints        Complaint[] 
+    notes             ComplaintNote[]
+    history           ComplaintHistory[]
     roleId Int
     role   UserRole @relation(fields: [roleId], references: [id])
-      sentInteractions      ComplaintInteraction[] @relation("InteractionSender")
-  receivedInteractions  ComplaintInteraction[] @relation("InteractionReceiver")
+    sentInteractions      ComplaintInteraction[] @relation("InteractionSender")
+    receivedInteractions  ComplaintInteraction[] @relation("InteractionReceiver")
     isEmailVerified   Boolean  @default(false)
     createdAt   DateTime  @default(now())
     updatedAt   DateTime  @updatedAt()
@@ -90,6 +91,7 @@ model UserRolePermission {
   government  Government  @relation(fields: [governmentId], references: [id], onDelete: Cascade)
   notes         ComplaintNote[]
   interactions ComplaintInteraction[]
+   history      ComplaintHistory[]
 }
 
 enum Status {
@@ -140,6 +142,37 @@ model ComplaintNote {
   
   @@index([complaintId])
   @@index([userId])
+}
+
+model ComplaintHistory {
+  id           Int      @id @default(autoincrement())
+  complaintId  Int
+  userId       Int 
+  action       HistoryAction
+  oldValue     String?  @db.Text 
+  newValue     String?  @db.Text 
+  description  String   @db.Text 
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  deletedAt    DateTime?
+  
+  complaint    Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id])
+  
+  @@index([complaintId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+enum HistoryAction {
+  COMPLAINT_CREATED 
+  COMPLAINT_UPDATED      
+  COMPLAINT_ASSIGNED 
+  STATUS_CHANGED 
+  NOTE_ADDED  
+  INTERACTION_CREATED   
+  COMPLAINT_DELETED  
 }
 
   model EmailVerification {

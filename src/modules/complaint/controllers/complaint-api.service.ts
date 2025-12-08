@@ -95,8 +95,23 @@ export class ComplaintApiService {
     return this._updater.updateStatus(complaintId,status,employeeId);
   }
 
+  // 🔥 جلب الشكاوى الغير محجوزة (للموظفين)
+  async findAvailableComplaints(
+    employeeId: number,
+    pagination: PaginationDto,
+    filter?: ComplaintFilterDto,
+  ) {
+    return this._getter.findAvailableComplaints(employeeId, pagination, filter);
+  }
 
-
+  // 🔥 جلب الشكاوى المحجوزة للموظف
+  async findMyAssignedComplaints(
+    employeeId: number,
+    pagination: PaginationDto,
+    filter?: ComplaintFilterDto,
+  ) {
+    return this._getter.findMyAssignedComplaints(employeeId, pagination, filter);
+  }
 
 
 

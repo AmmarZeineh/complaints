@@ -8,16 +8,19 @@ import { ComplaintController } from './controllers/complaint.controller';
 import { CommonModule } from '../common/common.module';
 import { EmailVerificationModule } from '../emailVerfication/EmailVerficationModule';
 import { NotificationModule } from '../notification/notificationModule';
+import { ComplaintHistoryService } from '../complaintHistory/services/complaintHistory-creator.service';
+import { ComplaintHistoryModule } from '../complaintHistory/complaintHistory.module';
 
 @Module({
   controllers: [ComplaintController],
-  imports: [CommonModule,EmailVerificationModule,NotificationModule],
+  imports: [CommonModule,EmailVerificationModule,NotificationModule,ComplaintHistoryModule],
   providers: [
     ComplaintApiService,
     ComplaintCreatorService,
     ComplaintGetterService,
     ComplaintUpdaterService,
     ComplaintDeleteService,
+    ComplaintHistoryService,
   ],
   exports: [
     ComplaintCreatorService,
