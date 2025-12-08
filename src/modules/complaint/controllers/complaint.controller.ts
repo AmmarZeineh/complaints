@@ -41,7 +41,35 @@ import { CreateInteractionDto } from '../dtos/create-interaction.dto';
 export class ComplaintController {
   constructor(private readonly _complaintApi: ComplaintApiService) {}
 
+    // 🔥 جديد: جلب الشكاوى الغير محجوزة (للموظفين)
+  @ApiBearerAuth('access-token')
+  @UseGuards(AuthGuard('jwt'))
+  @Get('available')
+  @ApiOperation({ summary: 'Get available (unassigned) complaints for employee' })
+  @ApiResponse({ type: FindAllComplaintDto })
+  async getAvailableComplaints(
+    @Query() pagination: PaginationDto,
+    @Query() filter: ComplaintFilterDto,
+    @Req() req: any,
+  ) {
+    const employeeId = Number(req.user.id);
+    return this._complaintApi.findAvailableComplaints(employeeId, pagination, filter);
+  }
 
+  // 🔥 جديد: جلب الشكاوى المحجوزة للموظف
+  @ApiBearerAuth('access-token')
+  @UseGuards(AuthGuard('jwt'))
+  @Get('my-assigned')
+  @ApiOperation({ summary: 'Get complaints assigned to current employee' })
+  @ApiResponse({ type: FindAllComplaintDto })
+  async getMyAssignedComplaints(
+    @Query() pagination: PaginationDto,
+    @Query() filter: ComplaintFilterDto,
+    @Req() req: any,
+  ) {
+    const employeeId = Number(req.user.id);
+    return this._complaintApi.findMyAssignedComplaints(employeeId, pagination, filter);
+  }
 
    @ApiBearerAuth('access-token')
    @UseGuards(AuthGuard('jwt'))
@@ -186,16 +214,10 @@ async findByGovernment(
     return this._complaintApi.update(id, dto, userId, files);
   }
 
- 
-
-
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete complaint' })
   async delete(@Param('id') id: number) {
     return this._complaintApi.delete(id);
   }
-
-
 
 }

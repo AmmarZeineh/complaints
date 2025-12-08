@@ -8,9 +8,11 @@ import { ComplaintNoteDeleterService } from './services/complaintNote-deleter.se
 import { PrismaModule } from '../prisma/prisma.module';
 import { UserModule } from '../users/user.module';
 import { ComplaintNoteRepository } from './repositories/complaintNote.repository';
+import { ComplaintHistoryModule } from '../complaintHistory/complaintHistory.module';
+import { ComplaintHistoryService } from '../complaintHistory/services/complaintHistory-creator.service';
 
 @Module({
-  imports: [PrismaModule,UserModule],
+  imports: [PrismaModule,UserModule,ComplaintHistoryModule],
   controllers: [ComplaintNoteController],
   providers: [
     ComplaintNoteApiService,
@@ -19,6 +21,7 @@ import { ComplaintNoteRepository } from './repositories/complaintNote.repository
     ComplaintNoteGetterService,
     ComplaintNoteUpdaterService,
     ComplaintNoteDeleterService,
+    ComplaintHistoryService,
   ],
   exports: [ComplaintNoteApiService],
 })

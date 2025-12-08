@@ -8,6 +8,7 @@ import { CreateInteractionDto } from '../dtos/create-interaction.dto';
 import { NotificationService } from 'src/modules/notification/notification.service';
 import e from 'express';
 import { send } from 'process';
+import { ComplaintHistoryService } from 'src/modules/complaintHistory/services/complaintHistory-creator.service';
 
 @Injectable()
 export class ComplaintCreatorService {
@@ -29,7 +30,8 @@ export class ComplaintCreatorService {
 
   constructor(
     private readonly _prisma: PrismaService,
-    private readonly notificationService: NotificationService
+    private readonly notificationService: NotificationService,
+    private readonly historyService: ComplaintHistoryService,
   ) {}
 
   async create(
@@ -60,8 +62,6 @@ export class ComplaintCreatorService {
       userId
     );
 
- 
-
     // تحديث الشكوى بمسارات الملفات (حفظ كـ JSON string)
     const updatedComplaint = await this._prisma.complaint.update({
       where: { id: complaint.id },
@@ -72,6 +72,18 @@ export class ComplaintCreatorService {
       select: selectComplaintValidator(),
     });
 
+       // ✅ تسجيل في السجل الزمني
+    await this.historyService.logComplaintCreated(
+      complaint.id,
+      userId,
+      {
+        type: dto.type,
+        description: dto.description,
+        Location: dto.Location,
+        governmentId: dto.governmentId,
+      }
+    );
+
     // إرجاع البيانات مع تحويل JSON strings لـ arrays
     return {
       ...updatedComplaint,
@@ -79,8 +91,6 @@ export class ComplaintCreatorService {
       documents: updatedComplaint.documents ? JSON.parse(updatedComplaint.documents) : [],
     };
   }
-
-
 
     
   async createInteraction(
@@ -191,6 +201,14 @@ export class ComplaintCreatorService {
       },
     });
 
+    // ✅ تسجيل في السجل الزمني
+    await this.historyService.logInteractionCreated(
+      complaintId,
+      senderId,
+      interaction.id,
+      type,
+      message
+    );
 
 
   // 6) إرسال إشعار للمستقبل
