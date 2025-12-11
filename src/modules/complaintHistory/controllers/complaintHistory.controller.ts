@@ -1,4 +1,3 @@
-// src/modules/complaintHistory/controllers/complaintHistory.controller.ts
 import { FindAllComplaintHistoryDto } from '../dtos/find-all-history.dto';
 import { 
   ApiBearerAuth, 
@@ -17,10 +16,15 @@ import {
   UseGuards,
   Res,
   Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { PaginationDto } from 'src/common/filter/pagination/pagination-param.dto';
 import { ComplaintHistoryApiService } from '../controllers/complaintHistory-api.service';
+import { ExportResponseDto } from '../dtos/export-response.dto';
+import { createReadStream } from 'fs';
+import path, { join } from 'path';
+import { PermissionsGuard, RequirePermissions } from 'src/modules/auth/guards/permissions.guard';
 
 @ApiTags('Complaint History')
 @Controller('complaint-history')
@@ -29,7 +33,6 @@ export class ComplaintHistoryController {
     private readonly _complaintHistoryApi: ComplaintHistoryApiService,
   ) {}
   
-  // ✅ جلب السجل الزمني الكامل لشكوى
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'))
   @Get(':id')
@@ -42,7 +45,6 @@ export class ComplaintHistoryController {
     return this._complaintHistoryApi.getComplaintHistory(complaintId, pagination);
   }
 
-  // ✅ جلب إحصائيات السجل الزمني
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'))
   @Get(':id/stats')
@@ -51,26 +53,75 @@ export class ComplaintHistoryController {
     return this._complaintHistoryApi.getHistoryStats(complaintId);
   }
 
-  // ✅ تصدير تقرير PDF
+//  // ✅ تصدير تقرير PDF
   @ApiBearerAuth('access-token')
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @RequirePermissions('export_complaint_history')
   @Get(':id/export/pdf')
-  @ApiOperation({ summary: 'Export complaint report as PDF' })
-  @ApiProduces('application/pdf')
-  @Header('Content-Type', 'application/pdf')
+  @ApiOperation({ summary: 'Generate PDF and get download info' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'PDF generated successfully',
+    type: ExportResponseDto,
+  })
   async exportPDF(
     @Param('id', ParseIntPipe) complaintId: number,
-    @Res() res: Response,
   ) {
-    const pdfBuffer = await this._complaintHistoryApi.exportComplaintReportPDF(complaintId);
+    const result = await this._complaintHistoryApi.exportComplaintHistoryPDF(complaintId);
     
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename=complaint-${complaintId}-report.pdf`,
-      'Content-Length': pdfBuffer.length,
-    });
-    
-    res.end(pdfBuffer);
+    return {
+      success: true,
+      message: 'تم إنشاء التقرير بنجاح',
+      data: {
+        downloadUrl: result.downloadUrl,
+        fileName: result.fileName,
+        fileSize: result.fileSize,
+        recordsCount: result.recordsCount,
+        generatedAt: result.generatedAt,
+      },
+    };
   }
+  //   // ✅ تصدير تقرير PDF - تنزيل مباشر
+  // @Get(':id/export/pdf')
+  // @ApiOperation({ summary: 'Export and download complaint history as PDF' })
+  // @ApiProduces('application/pdf')
+  // @ApiResponse({ 
+  //   status: 200, 
+  //   description: 'PDF file download',
+  //   schema: {
+  //     type: 'string',
+  //     format: 'binary',
+  //   },
+  // })
+  // async exportPDF(
+  //   @Param('id', ParseIntPipe) complaintId: number,
+  //   @Res({ passthrough: true }) res: Response,
+  // ): Promise<StreamableFile> {
+  //   // توليد الملف
+  //   const result = await this._complaintHistoryApi.exportComplaintHistoryPDF(complaintId);
+    
+  //   const filePath = path.join(process.cwd(), 'uploads', 'exports', result.fileName);
+    
+  //   // إعداد Headers للتنزيل
+  //   res.set({
+  //     'Content-Type': 'application/pdf',
+  //     'Content-Disposition': `attachment; filename="${encodeURIComponent(`complaint-${complaintId}-history.pdf`)}"`,
+  //     'Content-Length': result.fileSizeBytes,
+  //     'Cache-Control': 'no-cache, no-store, must-revalidate',
+  //     'Pragma': 'no-cache',
+  //     'Expires': '0',
+  //   });
 
+  //   // إنشاء stream وإرجاع الملف
+  //   const file = createReadStream(filePath);
+    
+  //   // // حذف الملف بعد الإرسال (بعد 5 ثواني)
+  //   // setTimeout(() => {
+  //   //   this._complaintHistoryApi.cleanupFile(filePath);
+  //   // }, 5000);
+
+  //   return new StreamableFile(file);
+  // }
+  
 }
+

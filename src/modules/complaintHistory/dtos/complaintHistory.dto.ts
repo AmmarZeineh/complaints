@@ -1,8 +1,6 @@
-// modules/complaint/dtos/complaint-history.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { HistoryAction, InteractionType } from '@prisma/client';
 
-// ✅ DTO للتفاعل مع الملفات
 export class InteractionDetailsDto {
   @ApiProperty()
   id: number;

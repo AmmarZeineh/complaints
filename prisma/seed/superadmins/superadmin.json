@@ -2,5 +2,6 @@
   "name": "Super Admin",
   "email": "superadmin@example.com",
   "password": "SuperSecret123",
-  "nationalID": "0000000000"
+  "nationalID": "0000000000",
+   "isEmailVerified":"1"
 }

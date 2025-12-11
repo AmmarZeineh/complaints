@@ -3,5 +3,10 @@
     "id": 1,
     "roleId": 2,
    "permissions": [1, 2, 3]
+  },
+  {
+    "id":2,
+    "roleId":1,
+    "permissions":[4]
   }
 ]

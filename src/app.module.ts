@@ -16,9 +16,7 @@ import { ComplaintNoteModule } from './modules/complaintNote/complaintNote.modul
 import { PermissionModule } from './modules/permission/permission.module';
 import { UserRolePermissionModule } from './modules/userRolePermission/userRolePermission.module';
 import { ComplaintHistoryModule } from './modules/complaintHistory/complaintHistory.module';
-
-
-
+import { BackupModule } from './modules/backup/backup.module';
 
 @Module({
   imports: [
@@ -39,6 +37,7 @@ import { ComplaintHistoryModule } from './modules/complaintHistory/complaintHist
     PermissionModule,
     UserRolePermissionModule,
     ComplaintHistoryModule,
+    BackupModule,
   ],
   controllers: [AppController],
   providers: [AppService],

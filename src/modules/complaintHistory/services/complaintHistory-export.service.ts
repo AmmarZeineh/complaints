@@ -1,226 +1,219 @@
-// modules/complaintHistory/services/complaintHistory-export.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
-import PDFDocument from 'pdfkit';
+import { ComplaintHistoryPdfService } from './complaintHistory-pdf.service';
+import { ConfigService } from '@nestjs/config';
+import * as path from 'path';
+import * as fs from 'fs';
+
+export interface ExportResult {
+  fileName: string;
+  filePath: string;
+  fileSize: string;
+  fileSizeBytes: number;
+  recordsCount: number;
+  generatedAt: string;
+  downloadUrl?: string; // اختياري
+}
 
 @Injectable()
 export class ComplaintHistoryExportService {
-  constructor(private readonly _prisma: PrismaService) {}
+  constructor(
+    private readonly _prisma: PrismaService,
+    private readonly _pdfService: ComplaintHistoryPdfService,
+    private readonly _configService: ConfigService,
+  ) {}
 
   /**
-   * تصدير تقرير كامل عن الشكوى بصيغة PDF
+   * تصدير السجل الزمني كـ PDF
    */
-  async exportComplaintReport(complaintId: number): Promise<Buffer> {
-    // 1. جلب بيانات الشكوى الكاملة
+  async exportComplaintHistoryPDF(complaintId: number): Promise<ExportResult> {
+    // 1️⃣ جلب معلومات الشكوى
     const complaint = await this._prisma.complaint.findUnique({
-      where: { id: complaintId, deletedAt: null },
+      where: { 
+        id: complaintId,
+        deletedAt: null, // التأكد من أن الشكوى غير محذوفة
+      },
       select: {
         id: true,
         type: true,
-        description: true,
-        Location: true,
         status: true,
         createdAt: true,
-        updatedAt: true,
-        images: true,
-        documents: true,
+        Location: true,
         user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
+          select: { name: true },
         },
         government: {
-          select: {
-            id: true,
-            name: true,
-          },
+          select: { name: true },
         },
       },
     });
 
     if (!complaint) {
-      throw new NotFoundException('الشكوى غير موجودة');
+      throw new NotFoundException('الشكوى غير موجودة أو تم حذفها');
     }
 
-    // 2. جلب السجل الزمني
+    // 2️⃣ جلب كل السجل الزمني (بدون pagination)
     const history = await this._prisma.complaintHistory.findMany({
-      where: { complaintId },
-      orderBy: { createdAt: 'asc' },
+      where: { 
+        complaintId,
+        deletedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         action: true,
         description: true,
+        createdAt: true,
         oldValue: true,
         newValue: true,
-        createdAt: true,
+        metadata: true,
         user: {
-          select: {
-            id: true,
-            name: true,
-          },
+          select: { name: true },
         },
       },
     });
 
-    // 3. جلب الإحصائيات
-    const [totalEvents, statusChanges, interactions, notes] = await Promise.all([
-      this._prisma.complaintHistory.count({ where: { complaintId } }),
-      this._prisma.complaintHistory.count({
-        where: { complaintId, action: 'STATUS_CHANGED' },
-      }),
-      this._prisma.complaintHistory.count({
-        where: { complaintId, action: 'INTERACTION_CREATED' },
-      }),
-      this._prisma.complaintHistory.count({
-        where: { complaintId, action: 'NOTE_ADDED' },
-      }),
-    ]);
+    if (history.length === 0) {
+      throw new NotFoundException('لا يوجد سجل زمني لهذه الشكوى');
+    }
 
-    // 4. إنشاء PDF
-    return this.generatePDF({
-      complaint,
-      history,
-      statistics: { totalEvents, statusChanges, interactions, notes },
-    });
+    // 3️⃣ إثراء البيانات بالتفاعلات والملاحظات
+    const enrichedHistory = await Promise.all(
+      history.map(async (item) => {
+        // إذا كان تفاعل
+        if (
+          item.action === 'INTERACTION_CREATED' &&
+          item.metadata &&
+          typeof item.metadata === 'object' &&
+          'interactionId' in item.metadata
+        ) {
+          const interactionId = (item.metadata as any).interactionId;
+          const interaction = await this._prisma.complaintInteraction.findUnique({
+            where: { 
+              id: interactionId,
+              deletedAt: null,
+            },
+            select: {
+              message: true,
+              images: true,
+              documents: true,
+            },
+          });
+
+          if (interaction) {
+            return {
+              ...item,
+              interaction: {
+                message: interaction.message,
+                images: this.parseJsonField(interaction.images),
+                documents: this.parseJsonField(interaction.documents),
+              },
+            };
+          }
+        }
+
+        // إذا كان ملاحظة
+        if (
+          item.action === 'NOTE_ADDED' &&
+          item.metadata &&
+          typeof item.metadata === 'object' &&
+          'noteId' in item.metadata
+        ) {
+          const noteId = (item.metadata as any).noteId;
+          const note = await this._prisma.complaintNote.findUnique({
+            where: { 
+              id: noteId,
+              deletedAt: null,
+            },
+            select: { content: true },
+          });
+
+          if (note) {
+            return {
+              ...item,
+              note: { content: note.content },
+            };
+          }
+        }
+
+        return item;
+      }),
+    );
+
+    // 4️⃣ توليد PDF
+    const fileName = await this._pdfService.generateComplaintHistoryPDF(
+      {
+        id: complaint.id,
+        type: complaint.type,
+        status: complaint.status,
+        createdAt: complaint.createdAt,
+        userName: complaint.user.name,
+        governmentName: complaint.government.name,
+        location: complaint.Location,
+      },
+      enrichedHistory,
+    );
+
+    // 5️⃣ إرجاع معلومات الملف
+    const filePath = path.join(process.cwd(), 'uploads', 'exports', fileName);
+    const fileSize = this._pdfService.getFileSize(filePath);
+    const stats = fs.statSync(filePath);
+    const baseUrl = this._configService.get<string>('BASE_URL') || 'http://localhost:3000';
+
+    return {
+      fileName,
+      filePath,
+      fileSize,
+      fileSizeBytes: stats.size,
+      recordsCount: history.length,
+      generatedAt: new Date().toISOString(),
+      downloadUrl: `${baseUrl}/uploads/exports/${fileName}`, // اختياري
+    };
   }
 
   /**
-   * توليد ملف PDF
+   * تنظيف الملفات القديمة
    */
-  private async generatePDF(data: any): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({
-        size: 'A4',
-        margin: 50,
-        info: {
-          Title: `تقرير الشكوى رقم ${data.complaint.id}`,
-          Author: 'نظام الشكاوى',
-        },
-      });
+  async cleanupOldFiles(olderThanHours: number = 24): Promise<number> {
+    const uploadsPath = path.join(process.cwd(), 'uploads', 'exports');
+    
+    if (!fs.existsSync(uploadsPath)) {
+      return 0;
+    }
 
-      const chunks: Buffer[] = [];
+    const files = fs.readdirSync(uploadsPath);
+    const now = Date.now();
+    const maxAge = olderThanHours * 60 * 60 * 1000;
+    let deletedCount = 0;
 
-      doc.on('data', (chunk) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
+    files.forEach((file) => {
+      const filePath = path.join(uploadsPath, file);
+      const stats = fs.statSync(filePath);
+      const age = now - stats.mtimeMs;
 
-      try {
-        // ملاحظة: لدعم العربية بشكل كامل، يجب تحميل خط عربي
-        // doc.font('fonts/Cairo-Regular.ttf');
-
-        // العنوان الرئيسي
-        doc
-          .fontSize(24)
-          .text(`Complaint Report #${data.complaint.id}`, { align: 'center' });
-
-        doc.moveDown(2);
-
-        // معلومات الشكوى الأساسية
-        doc.fontSize(16).text('Complaint Information', { underline: true });
-        doc.moveDown(0.5);
-
-        doc.fontSize(12);
-        doc.text(`Type: ${data.complaint.type}`);
-        doc.text(`Status: ${this.translateStatus(data.complaint.status)}`);
-        doc.text(`Location: ${data.complaint.Location}`);
-        doc.text(`Government: ${data.complaint.government.name}`);
-        doc.text(`Created: ${this.formatDate(data.complaint.createdAt)}`);
-        doc.text(`Last Updated: ${this.formatDate(data.complaint.updatedAt)}`);
-
-        doc.moveDown();
-        doc.text('Description:', { continued: false });
-        doc.text(data.complaint.description, { width: 500 });
-
-        doc.moveDown(2);
-
-        // معلومات المواطن
-        doc.fontSize(16).text('Citizen Information', { underline: true });
-        doc.moveDown(0.5);
-
-        doc.fontSize(12);
-        doc.text(`Name: ${data.complaint.user.name}`);
-        doc.text(`Email: ${data.complaint.user.email}`);
-
-        doc.moveDown(2);
-
-        // الإحصائيات
-        doc.fontSize(16).text('Statistics', { underline: true });
-        doc.moveDown(0.5);
-
-        doc.fontSize(12);
-        doc.text(`Total Events: ${data.statistics.totalEvents}`);
-        doc.text(`Status Changes: ${data.statistics.statusChanges}`);
-        doc.text(`Interactions: ${data.statistics.interactions}`);
-        doc.text(`Notes: ${data.statistics.notes}`);
-
-        doc.addPage();
-
-        // السجل الزمني
-        doc.fontSize(16).text('Timeline', { underline: true });
-        doc.moveDown(1);
-
-        data.history.forEach((event: any, index: number) => {
-          doc.fontSize(11);
-          doc.text(`${index + 1}. ${event.description}`, { continued: true });
-          doc.fontSize(9);
-          doc.text(` - ${this.formatDate(event.createdAt)}`, { align: 'left' });
-
-          if (event.user) {
-            doc.fontSize(9);
-            // ✅ تصحيح: استخدام fillColor بدلاً من color
-            doc.fillColor('gray').text(`   By: ${event.user.name}`);
-            // إعادة اللون للأسود للنص التالي
-            doc.fillColor('black');
-          }
-
-          doc.moveDown(0.5);
-
-          // إضافة صفحة جديدة إذا اقتربنا من نهاية الصفحة
-          if (doc.y > 700) {
-            doc.addPage();
-          }
-        });
-
-        // التذييل
-        doc.fontSize(8).text(
-          `Report generated on: ${this.formatDate(new Date())}`,
-          50,
-          doc.page.height - 50,
-          { align: 'center' }
-        );
-
-        doc.end();
-      } catch (error) {
-        reject(error);
+      if (age > maxAge) {
+        try {
+          fs.unlinkSync(filePath);
+          deletedCount++;
+        } catch (error) {
+          console.error(`Failed to delete file ${file}:`, error);
+        }
       }
     });
+
+    return deletedCount;
   }
 
   /**
-   * ترجمة الحالة
+   * Helper لتحويل JSON strings
    */
-  private translateStatus(status: string): string {
-    const translations: Record<string, string> = {
-      NEW: 'New',
-      INPROCESS: 'In Process',
-      COMPLETED: 'Completed',
-      REJECTED: 'Rejected',
-    };
-    return translations[status] || status;
-  }
-
-  /**
-   * تنسيق التاريخ
-   */
-  private formatDate(date: Date): string {
-    return new Date(date).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  private parseJsonField(field: string | null | undefined): string[] {
+    if (!field) return [];
+    try {
+      const parsed = JSON.parse(field);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
 }

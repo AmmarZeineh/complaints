@@ -26,6 +26,15 @@ export class UserDto {
   @ApiProperty()
   roleId: number;
 
+  @ApiProperty()
+ failedLoginAttempts: number;
+
+  @ApiProperty()
+  lockedUntil: Date;
+
+  @ApiProperty()
+  lastLoginAttemptAt: Date;
+
 
   @ApiProperty()
   governmentId: number;
@@ -43,7 +52,9 @@ export class UserDto {
     this.isEmailVerified=raw.isEmailVerified;
     this.roleId=raw.roleId;
     this.governmentId=raw.governmentId;
-
+    this.failedLoginAttempts=raw.failedLoginAttempts;
+    this.lastLoginAttemptAt=raw.lastLoginAttemptAt;
+    this.lockedUntil=raw.lockedUntil;
     this.government = raw.government
       ? new GovernmentDto(raw.government)
       : undefined;
@@ -60,6 +71,9 @@ export type RawUser = {
   isEmailVerified: boolean;
   roleId: number;
   governmentId: number;
+  failedLoginAttempts: number;
+  lockedUntil:         Date;
+  lastLoginAttemptAt:  Date;
 
   government?: RawGovernment | null; 
 };

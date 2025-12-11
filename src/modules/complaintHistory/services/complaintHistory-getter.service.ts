@@ -1,4 +1,3 @@
-// modules/complaint/services/complaint-history-getter.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { PaginationDto } from 'src/common/filter/pagination/pagination-param.dto';
