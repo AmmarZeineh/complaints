@@ -9,6 +9,8 @@ import { UserModule } from '../users/user.module';
 
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { NotificationService } from '../notification/notification.service';
+import { NotificationModule } from '../notification/notificationModule';
 // import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
@@ -17,8 +19,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
+    
+
     }),
     UserModule,
+    NotificationModule,
   ],
   controllers: [AuthController],
   providers: [

@@ -57,6 +57,10 @@ model UserRolePermission {
     sentInteractions      ComplaintInteraction[] @relation("InteractionSender")
     receivedInteractions  ComplaintInteraction[] @relation("InteractionReceiver")
     isEmailVerified   Boolean  @default(false)
+
+    failedLoginAttempts Int      @default(0)
+    lockedUntil         DateTime?
+    lastLoginAttemptAt  DateTime?
     createdAt   DateTime  @default(now())
     updatedAt   DateTime  @updatedAt()
     deletedAt   DateTime?

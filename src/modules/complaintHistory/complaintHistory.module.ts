@@ -6,6 +6,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { ComplaintHistoryController } from './controllers/complaintHistory.controller';
 import { ComplaintHistoryApiService } from './controllers/complaintHistory-api.service';
 import { ComplaintHistoryExportService } from './services/complaintHistory-export.service';
+import { ComplaintHistoryPdfService } from './services/complaintHistory-pdf.service';
+import { PermissionsGuard } from 'src/modules/auth/guards/permissions.guard';
 
 @Module({
   imports: [CommonModule,PrismaModule],
@@ -15,6 +17,8 @@ import { ComplaintHistoryExportService } from './services/complaintHistory-expor
     ComplaintHistoryService,
     ComplaintHistoryGetterService,
     ComplaintHistoryExportService,
+    ComplaintHistoryPdfService,
+    PermissionsGuard,
   ],
   exports: [
     ComplaintHistoryApiService,
