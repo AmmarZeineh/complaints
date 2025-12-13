@@ -17,6 +17,7 @@ import { PermissionModule } from './modules/permission/permission.module';
 import { UserRolePermissionModule } from './modules/userRolePermission/userRolePermission.module';
 import { ComplaintHistoryModule } from './modules/complaintHistory/complaintHistory.module';
 import { BackupModule } from './modules/backup/backup.module';
+import { RoleModule } from './modules/role/role.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { BackupModule } from './modules/backup/backup.module';
     UserRolePermissionModule,
     ComplaintHistoryModule,
     BackupModule,
+    RoleModule,
   ],
   controllers: [AppController],
   providers: [AppService],
