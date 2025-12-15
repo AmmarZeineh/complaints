@@ -14,6 +14,7 @@ import { NotificationService } from 'src/modules/notification/notification.servi
 const MAX_FAILED_ATTEMPTS = 5;      // بعد كم محاولة يفشل يقفل؟
 const LOCK_TIME_MINUTES = 15;       // مدة قفل الحساب (دقائق)
 const LOGIN_COOLDOWN_MS = 3000;     // أقل فترة بين محاولتي دخول لنفس الحساب (ms)
+const FAILED_ATTEMPTS_RESET_MINUTES = 30; //إذا مرّ 30 دقيقة بدون محاولات فاشلة
 
 @Injectable()
 export class AuthLoginService {
@@ -54,8 +55,22 @@ export class AuthLoginService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+     // قبل زيادة العداد
+     let failedCount = user.failedLoginAttempts;
+
+if (
+  user.lastFailedLoginAt &&
+  now.getTime() - user.lastFailedLoginAt.getTime() >
+    FAILED_ATTEMPTS_RESET_MINUTES * 60 * 1000
+) {
+  failedCount = 0;
+}
+
+failedCount += 1;
+     
+
       // زيادة عداد المحاولات الفاشلة + تحديث وقت المحاولة
-      const failedCount = user.failedLoginAttempts + 1;
+      // const failedCount = user.failedLoginAttempts + 1;
 
       let lockedUntil: Date | null = null;
       let resetFailedToZero = false;
@@ -97,6 +112,7 @@ export class AuthLoginService {
           failedLoginAttempts: resetFailedToZero ? 0 : failedCount,
           lockedUntil,
           lastLoginAttemptAt: now,
+          lastFailedLoginAt: now,
         },
       });
 
@@ -110,6 +126,7 @@ export class AuthLoginService {
         failedLoginAttempts: 0,
         lockedUntil: null,
         lastLoginAttemptAt: now,
+        lastFailedLoginAt: null,
       },
     });
 

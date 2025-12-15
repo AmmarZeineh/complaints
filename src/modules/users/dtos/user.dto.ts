@@ -35,6 +35,8 @@ export class UserDto {
   @ApiProperty()
   lastLoginAttemptAt: Date;
 
+  @ApiProperty()
+  lastFailedLoginAt: Date;
 
   @ApiProperty()
   governmentId: number;
@@ -55,6 +57,7 @@ export class UserDto {
     this.failedLoginAttempts=raw.failedLoginAttempts;
     this.lastLoginAttemptAt=raw.lastLoginAttemptAt;
     this.lockedUntil=raw.lockedUntil;
+    this.lastFailedLoginAt=raw.lastFailedLoginAt;
     this.government = raw.government
       ? new GovernmentDto(raw.government)
       : undefined;
@@ -74,6 +77,7 @@ export type RawUser = {
   failedLoginAttempts: number;
   lockedUntil:         Date;
   lastLoginAttemptAt:  Date;
+  lastFailedLoginAt:   Date;
 
   government?: RawGovernment | null; 
 };

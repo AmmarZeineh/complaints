@@ -10,6 +10,7 @@ export const selectUserValidator = () => {
     lastLoginAttemptAt:true,
     lockedUntil:true,
     failedLoginAttempts:true,
+    lastFailedLoginAt:true,
     createdAt: true,
     updatedAt: true,
     roleId:true,
