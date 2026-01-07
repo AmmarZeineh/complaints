@@ -53,7 +53,6 @@ export class ComplaintHistoryController {
     return this._complaintHistoryApi.getHistoryStats(complaintId);
   }
 
-//  // ✅ تصدير تقرير PDF
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
   @RequirePermissions('export_complaint_history')
@@ -81,47 +80,5 @@ export class ComplaintHistoryController {
       },
     };
   }
-  //   // ✅ تصدير تقرير PDF - تنزيل مباشر
-  // @Get(':id/export/pdf')
-  // @ApiOperation({ summary: 'Export and download complaint history as PDF' })
-  // @ApiProduces('application/pdf')
-  // @ApiResponse({ 
-  //   status: 200, 
-  //   description: 'PDF file download',
-  //   schema: {
-  //     type: 'string',
-  //     format: 'binary',
-  //   },
-  // })
-  // async exportPDF(
-  //   @Param('id', ParseIntPipe) complaintId: number,
-  //   @Res({ passthrough: true }) res: Response,
-  // ): Promise<StreamableFile> {
-  //   // توليد الملف
-  //   const result = await this._complaintHistoryApi.exportComplaintHistoryPDF(complaintId);
-    
-  //   const filePath = path.join(process.cwd(), 'uploads', 'exports', result.fileName);
-    
-  //   // إعداد Headers للتنزيل
-  //   res.set({
-  //     'Content-Type': 'application/pdf',
-  //     'Content-Disposition': `attachment; filename="${encodeURIComponent(`complaint-${complaintId}-history.pdf`)}"`,
-  //     'Content-Length': result.fileSizeBytes,
-  //     'Cache-Control': 'no-cache, no-store, must-revalidate',
-  //     'Pragma': 'no-cache',
-  //     'Expires': '0',
-  //   });
-
-  //   // إنشاء stream وإرجاع الملف
-  //   const file = createReadStream(filePath);
-    
-  //   // // حذف الملف بعد الإرسال (بعد 5 ثواني)
-  //   // setTimeout(() => {
-  //   //   this._complaintHistoryApi.cleanupFile(filePath);
-  //   // }, 5000);
-
-  //   return new StreamableFile(file);
-  // }
-  
 }
 

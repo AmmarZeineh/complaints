@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/modules/prisma/services/prisma.service';
 import { UpdateComplaintDto } from '../dtos/update-complaint.dto';
 import { selectComplaintValidator } from '../validators/select-complaint-validator';
@@ -248,105 +248,208 @@ export class ComplaintUpdaterService {
     urls.forEach(url => this.deleteFileFromUrl(url));
   }
 
+async assignComplaint(complaintId: number, employeeId: number) {
 
-
-  async assignComplaint(complaintId: number, employeeId: number) {
-
+  // 1️⃣ تحقق من المستخدم (خارج الترانزاكشن)
   const user = await this._prisma.user.findUnique({
     where: { id: employeeId },
-    include: { role: true }, // مهم حتى يجيب نوع الدور
+    include: { role: true },
   });
 
   if (!user) {
     throw new NotFoundException("User not found");
   }
 
-  // 2. تحقق إنو موظّف فعلياً
   if (user.role.name !== "EMPLOYEE") {
     throw new ForbiddenException("Only employees can assign complaints");
   }
 
-  //     // التحقق من أن الموظف ينتمي لنفس الجهة
-    const employee = await this._prisma.user.findUnique({
-      where: { id: employeeId },
-      select: {
-        id: true,
-        name: true,
-        governmentId: true,
-        role: { select: { name: true } },
+  // نحتاج الاسم للإشعارات
+  const employeeName = user.name;
+
+  // 2️⃣ الترانزاكشن التشاؤمية (قصيرة جداً)
+  const complaint = await this._prisma.$transaction(async (tx) => {
+
+    // 🔒 قفل الصف
+    const rows = await tx.$queryRaw<
+      { id: number; status: Status; employeeId: number | null; userId: number }[]
+    >`
+      SELECT id, status, employeeId, userId
+      FROM Complaint
+      WHERE id = ${complaintId}
+      FOR UPDATE
+    `;
+
+    if (rows.length === 0) {
+      throw new NotFoundException("Complaint not found");
+    }
+
+    const complaint = rows[0];
+
+    // ❌ لا يسمح أن يحجزها نفس صاحب الشكوى
+    if (complaint.userId === employeeId) {
+      throw new BadRequestException(
+        "You cannot assign a complaint to yourself"
+      );
+    }
+
+    // ❌ إن لم تكن جديدة
+    if (complaint.status !== 'NEW') {
+      throw new ConflictException(
+        "Complaint already assigned to another employee"
+      );
+    }
+
+  // await new Promise(resolve => setTimeout(resolve, 10000)); // 10 ثواني
+
+    // ✏️ الحجز
+    return tx.complaint.update({
+      where: { id: complaintId },
+      data: {
+        employeeId,
+        status: 'INPROCESS',
       },
+      select: selectComplaintValidator(),
     });
+  // },
+  //    {
+  //   timeout: 15000, // ⬅️ مهم
+  // }
+});
 
-  const complaint = await this._prisma.complaint.findUnique({
-    where: { id: complaintId },
-  });
-
-  if (!complaint) {
-    throw new NotFoundException("Complaint not found");
-  }
-
-  if(complaint.employeeId === employeeId){
-    throw new BadRequestException("You are already assigned to this complaint");
-  }
-
-  if(complaint.userId === employeeId){
-    throw new BadRequestException("You cannot assign a complaint to yourself");
-  }
-  if(complaint.status === "COMPLETED" || complaint.status === "REJECTED"){
-    throw new BadRequestException("Cannot assign a completed or rejected complaint");
-  }
-  
-  if (complaint.employeeId !== null && complaint.status !== "NEW") {
-    throw new BadRequestException("Complaint already assigned to another employee");
-  }
-
-  if (complaint.status !== "NEW") {
-    throw new BadRequestException("Complaint is not available for assignment");
-  }
-
-    // 4. إرسال الإشعارات لصاحب الشكوى
+  // 3️⃣ الإشعارات (خارج الترانزاكشن)
   const tokens = await this._prisma.userToken.findMany({
     where: { userId: complaint.userId },
   });
 
   const title = "تم استلام الشكوى الخاصة بك";
 
-  for (const t of tokens) {
-    const body = `تم استلام شكواك رقم ${complaint.id} من قبل الموظف وهي الآن قيد المعالجة.`;
+  await Promise.all(
+    tokens.map(async (t) => {
+      const body = `تم استلام شكواك رقم ${complaint.id} من قبل الموظف ${employeeName} وهي الآن قيد المعالجة.`;
 
-    // إرسال الإشعار عبر FCM
-    await this.notificationService.sendNotification(t.fcmToken, title, body);
+      await this.notificationService.sendNotification(t.fcmToken, title, body);
 
-    // حفظ الإشعار في قاعدة البيانات
-    await this._prisma.notification.create({
-      data: {
-        userId: complaint.userId,
-        title,
-        body,
-        type: "COMPLAINT_ASSIGNED",
+      await this._prisma.notification.create({
         data: {
-          complaintId: complaint.id,
+          userId: complaint.userId,
+          title,
+          body,
+          type: "COMPLAINT_ASSIGNED",
+          data: { complaintId: complaint.id },
         },
-      },
-    });
-  }
+      });
+    })
+  );
 
-  const updated =  await this._prisma.complaint.update({
-    where: { id: complaintId },
-    data: {
-      employeeId,
-      status: "INPROCESS",
-    },
-    select: selectComplaintValidator(),
-  });
+  // 4️⃣ السجل الزمني
+  await this.historyService.logComplaintAssigned(
+    complaintId,
+    employeeId,
+    employeeName
+  );
 
-      await this.historyService.logComplaintAssigned(
-      complaintId,
-      employeeId,
-      employee.name
-    );
-    return updated;
+  return complaint;
 }
+
+
+//   async assignComplaint(complaintId: number, employeeId: number) {
+
+//   const user = await this._prisma.user.findUnique({
+//     where: { id: employeeId },
+//     include: { role: true }, // مهم حتى يجيب نوع الدور
+//   });
+
+//   if (!user) {
+//     throw new NotFoundException("User not found");
+//   }
+
+//   // 2. تحقق إنو موظّف فعلياً
+//   if (user.role.name !== "EMPLOYEE") {
+//     throw new ForbiddenException("Only employees can assign complaints");
+//   }
+
+//   //     // التحقق من أن الموظف ينتمي لنفس الجهة
+//     const employee = await this._prisma.user.findUnique({
+//       where: { id: employeeId },
+//       select: {
+//         id: true,
+//         name: true,
+//         governmentId: true,
+//         role: { select: { name: true } },
+//       },
+//     });
+
+//   const complaint = await this._prisma.complaint.findUnique({
+//     where: { id: complaintId },
+//   });
+
+//   if (!complaint) {
+//     throw new NotFoundException("Complaint not found");
+//   }
+
+//   if(complaint.employeeId === employeeId){
+//     throw new BadRequestException("You are already assigned to this complaint");
+//   }
+
+//   if(complaint.userId === employeeId){
+//     throw new BadRequestException("You cannot assign a complaint to yourself");
+//   }
+//   if(complaint.status === "COMPLETED" || complaint.status === "REJECTED"){
+//     throw new BadRequestException("Cannot assign a completed or rejected complaint");
+//   }
+  
+//   if (complaint.employeeId !== null && complaint.status !== "NEW") {
+//     throw new BadRequestException("Complaint already assigned to another employee");
+//   }
+
+//   if (complaint.status !== "NEW") {
+//     throw new BadRequestException("Complaint is not available for assignment");
+//   }
+
+//     // 4. إرسال الإشعارات لصاحب الشكوى
+//   const tokens = await this._prisma.userToken.findMany({
+//     where: { userId: complaint.userId },
+//   });
+
+//   const title = "تم استلام الشكوى الخاصة بك";
+
+//   for (const t of tokens) {
+//     const body = `تم استلام شكواك رقم ${complaint.id} من قبل الموظف وهي الآن قيد المعالجة.`;
+
+//     // إرسال الإشعار عبر FCM
+//     await this.notificationService.sendNotification(t.fcmToken, title, body);
+
+//     // حفظ الإشعار في قاعدة البيانات
+//     await this._prisma.notification.create({
+//       data: {
+//         userId: complaint.userId,
+//         title,
+//         body,
+//         type: "COMPLAINT_ASSIGNED",
+//         data: {
+//           complaintId: complaint.id,
+//         },
+//       },
+//     });
+//   }
+
+//   const updated =  await this._prisma.complaint.update({
+//     where: { id: complaintId },
+//     data: {
+//       employeeId,
+//       status: "INPROCESS",
+//     },
+//     select: selectComplaintValidator(),
+//   });
+
+//       await this.historyService.logComplaintAssigned(
+//       complaintId,
+//       employeeId,
+//       employee.name
+//     );
+//     return updated;
+// }
 
 //     const complaint = await this._prisma.complaint.findUnique({
 //       where: { id: complaintId },
