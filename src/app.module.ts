@@ -18,6 +18,9 @@ import { UserRolePermissionModule } from './modules/userRolePermission/userRoleP
 import { ComplaintHistoryModule } from './modules/complaintHistory/complaintHistory.module';
 import { BackupModule } from './modules/backup/backup.module';
 import { RoleModule } from './modules/role/role.module';
+import { LoadBalancerModule } from './modules/load-balancer/load-balancer.module';
+import { HealthController } from './modules/load-balancer/health.controller';
+import { AopModule } from './common/aop/aop.module';
 
 @Module({
   imports: [
@@ -40,8 +43,10 @@ import { RoleModule } from './modules/role/role.module';
     ComplaintHistoryModule,
     BackupModule,
     RoleModule,
+    LoadBalancerModule,
+    AopModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController,HealthController],
   providers: [AppService],
 })
 export class AppModule { }
