@@ -44,10 +44,12 @@ export class LoadBalancerInterceptor implements NestInterceptor {
         this.logger.error(`❌ Load balancer error: ${error.message}`);
         this.logger.warn('⚠️ Falling back to main server handler');
         return next.handle();
+        return next.handle();
       }),
     );
   }
 
+  private async handleRequest(
   private async handleRequest(
     request: Request,
     response: Response,
